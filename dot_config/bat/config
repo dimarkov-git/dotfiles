@@ -1,0 +1,12 @@
+# bat doesn't auto-switch with macOS appearance; the dark variant stays
+# readable against Latte, the reverse isn't true.
+--theme="Catppuccin Mocha"
+
+--paging=auto
+--tabs=4
+--style=auto
+
+# bat ships no Nushell syntax; Bash is close enough.
+--map-syntax="*.nu:Bash"
+# Brewfile is a Ruby DSL, not recognised by the bare filename.
+--map-syntax="Brewfile:Ruby"

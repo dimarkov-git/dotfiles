@@ -1,0 +1,18 @@
+git_protocol: ssh
+# --wait is mandatory: Zed's CLI returns immediately without it, so gh would
+# race past the still-unsaved file.
+editor: zed --wait
+# --paging=always because gh strips ANSI colors when piping.
+pager: delta --paging=always
+browser: ""
+prompt: enabled
+aliases:
+    co: pr checkout
+    prl: pr list --author "@me"
+    prv: pr view --web
+    prc: pr create --web
+    il: issue list --assignee "@me"
+    iv: issue view --web
+    rwf: run watch
+    rl: run list --limit 10
+version: "1"

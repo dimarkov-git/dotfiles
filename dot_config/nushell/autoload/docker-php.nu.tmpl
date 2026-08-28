@@ -1,0 +1,151 @@
+{{- if index . "dockerPhpRepo" -}}
+# Dockerized PHP toolchain. A project is any directory tree containing a
+# `.env` with PHP_BUILDER_IMAGE_VERSION — the marker for "this project pins
+# its PHP via a docker image". The project root is found by walking $PWD
+# upward, mounted at /var/www/html, and the container cd's to the same
+# relative path the host shell is in, so `d-php -f script.php` resolves
+# against the file next to you.
+#
+#   d-php <args...>    — php in the container
+#   d-make <target>    — make in the container, always at the project root
+#   d-composer <args>  — composer in the container, always at the project root
+#   d-sh               — interactive bash at your relative path
+#
+# All four are always callable and error out when not in a project.
+
+const _DPHP_MARKER_KEY = "PHP_BUILDER_IMAGE_VERSION"
+const _DPHP_REPO_KEY = "PHP_BUILDER_IMAGE_REPO"
+# From chezmoi data. A project's .env may override via PHP_BUILDER_IMAGE_REPO.
+const _DPHP_DEFAULT_REPO = "{{ .dockerPhpRepo }}"
+
+# Returns "" if the key is missing or the file is unreadable.
+def _dphp-read-env [file: string, key: string] {
+    open --raw $file
+    | lines
+    | where ($it | str starts-with $"($key)=")
+    | first
+    | default ""
+    | str replace --regex ('^' + $key + '="?([^"]*)"?$') '$1'
+}
+
+# Returns { root, image, rel_pwd, … } or null; `rel_pwd` is appended to
+# /var/www/html. Non-string `from` (the banner's null `before`) means "nowhere".
+def _dphp-find-project-at [from: any] {
+    if ($from | describe) != "string" { return null }
+    mut current = ($from | path expand)
+    loop {
+        let env_file = ($current | path join ".env")
+        if ($env_file | path exists) {
+            let version = (_dphp-read-env $env_file $_DPHP_MARKER_KEY)
+            if not ($version | is-empty) {
+                let env_repo = (_dphp-read-env $env_file $_DPHP_REPO_KEY)
+                let repo = if ($env_repo | is-empty) { $_DPHP_DEFAULT_REPO } else { $env_repo }
+                let host_pwd = ($from | path expand)
+                let rel = if $host_pwd == $current {
+                    ""
+                } else {
+                    $host_pwd | str replace $"($current)/" ""
+                }
+                return {
+                    root: $current
+                    image: $"($repo):($version)"
+                    repo: $repo
+                    version: $version
+                    rel_pwd: $rel
+                }
+            }
+        }
+        let parent = ($current | path dirname)
+        if $parent == $current {
+            return null
+        }
+        $current = $parent
+    }
+}
+
+def _dphp-find-project [] {
+    _dphp-find-project-at $env.PWD
+}
+
+# The inner command arrives as one list to dodge nushell's flag parser —
+# inside a list literal it won't try to bind `-v` to this function.
+def --env _dphp-run [cmd: list<string>, --at-root] {
+    let info = (_dphp-find-project)
+    if $info == null {
+        error make {
+            msg: "not in a PHP docker project"
+            label: { text: $"no ($_DPHP_MARKER_KEY) found in any .env from ($env.PWD) upward" span: (metadata $cmd).span }
+            help: "cd into a project whose .env defines PHP_BUILDER_IMAGE_VERSION"
+        }
+    }
+    let composer_cache = ($env.HOME | path join ".cache" "composer")
+    mkdir $composer_cache
+    let workdir = if $at_root or ($info.rel_pwd | is-empty) {
+        "/var/www/html"
+    } else {
+        $"/var/www/html/($info.rel_pwd)"
+    }
+    let tty_flag = if (is-terminal --stdin) and (is-terminal --stdout) { ["-it"] } else { [] }
+    (^docker run --rm
+        ...$tty_flag
+        --entrypoint ""
+        -v $"($info.root):/var/www/html:delegated"
+        -v $"($composer_cache):/root/.composer/cache"
+        -w $workdir
+        $info.image
+        ...$cmd)
+}
+
+# `--wrapped` disables flag parsing so `d-php -v`, `d-php -f script.php` etc.
+# forward through cleanly.
+def --env --wrapped d-php [...args: string] {
+    _dphp-run ([php] ++ $args)
+}
+
+# --at-root: Makefiles live at the project root, and `make` from a subdir
+# wouldn't find targets.
+def --env --wrapped d-make [...args: string] {
+    _dphp-run --at-root ([make] ++ $args)
+}
+
+# --at-root: composer.json and vendor/ live at the project root.
+def --env --wrapped d-composer [...args: string] {
+    _dphp-run --at-root ([composer] ++ $args)
+}
+
+def --env d-sh [] {
+    _dphp-run [bash]
+}
+
+# --- Activation banner ---
+# Fires only when entering a project from outside it; staying within one (or
+# leaving it) is silent, or every cd between subdirs would print.
+#
+# Idempotent registration: the hook is tagged with a `name` and any existing
+# copy dropped before appending, otherwise re-sourcing config stacks
+# duplicates and the banner fires N times per cd. Append-only, so other
+# modules' PWD hooks survive.
+let _existing = ($env.config.hooks.env_change.PWD? | default [])
+let _filtered = ($_existing | each {|h|
+    if ($h | describe | str starts-with "record") and ($h.name? == "docker-php-banner") {
+        null
+    } else {
+        $h
+    }
+} | compact)
+$env.config.hooks.env_change.PWD = ($_filtered | append {
+    name: "docker-php-banner"
+    code: { |before, after|
+        # Both sides get probed explicitly: $env.PWD is already the AFTER state.
+        # `before` is null on the first run — reads as "wasn't in a project".
+        let was = (_dphp-find-project-at $before)
+        let now = (_dphp-find-project-at $after)
+        if $now != null and ($was == null or $was.root != $now.root) {
+            let project_name = ($now.root | path basename)
+            let image_short = ($now.repo | path basename)
+            print $"✓ docker-php active — ($project_name) [($image_short):($now.version)]"
+            print "  commands: d-php · d-make · d-composer · d-sh"
+        }
+    }
+})
+{{- end }}

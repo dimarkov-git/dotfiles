@@ -1,0 +1,24 @@
+#!/bin/bash
+# Trusts third-party tap formulae from Brewfile.tmpl. Separate from the run_once
+# bootstrap because trust.json can vanish and a once-per-machine script won't restore it.
+#
+# Brewfile.tmpl hash: {{ include "Brewfile.tmpl" | sha256sum }}
+
+set -euo pipefail
+
+command -v brew >/dev/null 2>&1 || { echo "brew not installed; skipping"; exit 0; }
+brew trust --help >/dev/null 2>&1 || { echo "no \`brew trust\`; skipping"; exit 0; }
+
+BREWFILE_TMPL="{{ .chezmoi.sourceDir }}/Brewfile.tmpl"
+[[ -f "$BREWFILE_TMPL" ]] || { echo "Brewfile.tmpl not found; skipping"; exit 0; }
+
+# The template, not the rendered Brewfile: this runs `before`, so on a fresh
+# machine the rendered file does not exist yet.
+chezmoi execute-template < "$BREWFILE_TMPL" \
+    | grep -Eo '^(brew|cask) "[^"]+/[^"]+/[^"]+"' \
+    | sed -E 's/^(brew|cask) "(.*)"$/\2/' \
+    | while read -r entry; do
+        [[ -n "$entry" ]] || continue
+        brew trust --formula "$entry" >/dev/null 2>&1 \
+            || echo "WARNING: could not trust $entry; brew bundle may fail" >&2
+    done

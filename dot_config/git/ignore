@@ -1,0 +1,42 @@
+# Global gitignore — applies to every repo on this machine.
+# Git auto-loads this from $XDG_CONFIG_HOME/git/ignore (i.e. ~/.config/git/ignore)
+# without needing `git config --global core.excludesfile`.
+# Keep entries to OS / editor / tool noise that has no business in any repo.
+
+# --- macOS Finder noise ---
+.DS_Store
+.AppleDouble
+.LSOverride
+# Finder folder icon: literally "Icon\r"; gitignore has no CR escape, ? covers it.
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+
+# --- Editor / IDE local state ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# --- Direnv / local secrets ---
+.envrc.local
+.env.local
+
+# --- Claude Code per-machine overrides ---
+# settings.local.json holds machine-specific permission grants and overrides;
+# the team-shared .claude/settings.json stays tracked.
+.claude/settings.local.json
+
+# --- mise per-machine overrides ---
+# mise.local.toml is the convention for machine-only tool/version pins
+# that shouldn't reach the team's repo. mise.<env>.local.toml follows the
+# same rule. The team-shared mise.toml stays tracked.
+mise.local.toml
+mise.*.local.toml
+.mise.local.toml
+.mise.*.local.toml
+
+**/.claude/.cc-writes/

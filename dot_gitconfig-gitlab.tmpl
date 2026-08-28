@@ -1,0 +1,13 @@
+{{/* GitLab-specific behaviour, included by dot_gitconfig.tmpl for any repo
+   whose remote points at gitlabHost. Identity is a separate axis, in
+   dot_gitconfig-work.tmpl.
+*/ -}}
+{{- if index . "gitlabHost" -}}
+[push]
+	# Open a draft MR on first push of a new branch. Must be push.pushOption:
+	# remote.<name>.pushOption reads back fine but is never sent.
+	pushOption = merge_request.create
+	pushOption = merge_request.draft
+	pushOption = merge_request.remove_source_branch
+	pushOption = merge_request.squash
+{{- end }}

@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Sole reload trigger: init.lua has no pathwatcher, since configs are only ever
+# edited through this repo. Hashes below are what re-run this script.
+
+{{ range (glob (joinPath .chezmoi.sourceDir "dot_hammerspoon" "*.lua")) -}}
+# {{ base . }}: {{ include . | sha256sum }}
+{{ end }}
+set -euo pipefail
+
+command -v hs >/dev/null 2>&1 || { echo "hs CLI not installed; skipping reload"; exit 0; }
+
+# A syntax error aborts init.lua past the point that reports module failures,
+# leaving a silent empty menubar. Parse first, keeping the running config on
+# error. Runs in the live Hammerspoon since there is no lua on the host, so it
+# must only parse — never exit or reload it.
+for f in "$HOME"/.hammerspoon/*.lua; do
+    if ! out=$(hs -c "local _, e = loadfile([[$f]]); print(e or 'OK')" 2>&1); then
+        echo "Hammerspoon not reachable; config loads on next launch"
+        exit 0
+    fi
+    case "$out" in
+        OK) ;;
+        *) echo "syntax error in $(basename "$f"), not reloading: $out" >&2; exit 1 ;;
+    esac
+done
+
+# Not waited on: reload tears down the message port mid-request, so `hs` never
+# gets a reply. Not running is fine — the next launch reads the new config.
+hs -c 'hs.reload()' </dev/null >/dev/null 2>&1 &
+sleep 2

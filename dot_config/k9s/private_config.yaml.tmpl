@@ -1,0 +1,61 @@
+# k9s settings. Deployed to ~/.config/k9s only because env.nu sets
+# K9S_CONFIG_DIR — k9s ignores XDG_CONFIG_HOME and would otherwise read
+# ~/Library/Application Support/k9s. Drop that variable and this file goes
+# unread; the skin script writes to the same path and must move with it.
+#
+# Only this file and aliases.yaml are managed. `clusters/` is per-cluster UI
+# state k9s rewrites itself, and kubeconfig (~/.kube/) holds OIDC client
+# secrets — neither belongs in a public repo. See docs/bootstrap.md step 0.
+#
+# `private_` prefix is mode-matching, not secrecy: k9s writes this file 0600,
+# and without the prefix chezmoi expects 0644, sees a mismatch and stops to
+# ask — which under `make apply` has no TTY. Same trap as Zed's settings.json.
+k9s:
+  liveViewAutoRefresh: false
+  gpuVendors: {}
+  screenDumpDir: {{ .chezmoi.homeDir }}/.config/k9s/screen-dumps
+  refreshRate: 2
+  apiServerTimeout: 15s
+  maxConnRetry: 5
+  readOnly: false
+  noExitOnCtrlC: false
+  portForwardAddress: localhost
+  ui:
+    enableMouse: false
+    headless: false
+    logoless: false
+    crumbsless: false
+    splashless: false
+    reactive: false
+    noIcons: false
+    defaultsToFullScreen: false
+    useFullGVRTitle: false
+    skin: catppuccin-mocha
+  skipLatestRevCheck: false
+  disablePodCounting: false
+  shellPod:
+    image: busybox:1.35.0
+    namespace: default
+    limits:
+      cpu: 100m
+      memory: 100Mi
+  imageScans:
+    enable: false
+    exclusions:
+      namespaces: []
+      labels: {}
+  logger:
+    tail: 100
+    buffer: 5000
+    sinceSeconds: -1
+    textWrap: false
+    disableAutoscroll: false
+    showTime: false
+  thresholds:
+    cpu:
+      critical: 90
+      warn: 70
+    memory:
+      critical: 90
+      warn: 70
+  defaultView: ""

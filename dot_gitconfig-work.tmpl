@@ -1,0 +1,20 @@
+{{/* Work git identity, included by dot_gitconfig.tmpl for repos under
+   gitWorkDir. Only the keys that differ from the personal default — aliases,
+   delta and the rest stay in ~/.gitconfig and are inherited.
+*/ -}}
+{{- if or (index . "gitWorkName") (index . "gitWorkEmail") (index . "gitWorkSigningKey") -}}
+[user]
+{{- if index . "gitWorkName" }}
+	name = {{ index . "gitWorkName" }}
+{{- end }}
+{{- if index . "gitWorkEmail" }}
+	email = {{ index . "gitWorkEmail" }}
+{{- end }}
+{{- if index . "gitWorkSigningKey" }}
+	signingkey = {{ index . "gitWorkSigningKey" }}
+{{- end }}
+
+[commit]
+	# Not inherited: ~/.gitconfig sets this from the personal key's presence.
+	gpgsign = {{ if index . "gitWorkSigningKey" }}true{{ else }}false{{ end }}
+{{- end }}

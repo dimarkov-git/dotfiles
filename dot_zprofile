@@ -1,0 +1,50 @@
+# Login-shell PATH. This file exists for GUI apps, not for humans.
+#
+# macOS GUI apps start from launchd with a bare
+# /usr/bin:/bin:/usr/sbin:/sbin. Electron apps (Freelens, VS Code, …) work
+# around that with the `shell-env` library: they run the account's login shell
+# and parse the environment it prints. That parser expects POSIX `env` output,
+# which Nushell does not produce — nu's `env` is a structured table. So with
+# `dscl . -read $HOME UserShell` set to nu, resolution silently yields nothing
+# and the app keeps the bare PATH.
+#
+# Concretely: Freelens then can't find `kubectl` for the kubeconfig `exec:`
+# credential plugin and every OIDC context fails with
+# `exec: executable kubectl not found`.
+#
+# Hence the account's login shell is /bin/zsh and this file mirrors the PATH
+# from dot_config/nushell/env.nu.tmpl. Interactive work still happens in nu —
+# Ghostty launches it via `command =` in dot_config/ghostty/config, which
+# bypasses the login shell entirely.
+#
+# Keep the entries below in sync with env.nu.tmpl's `path add` block.
+
+eval "$(/opt/homebrew/bin/brew shellenv zsh)"
+
+# Prepended in reverse order of env.nu's `path add` calls, which also prepend —
+# so the resulting precedence matches nu's.
+#
+# Skips entries already present: this file is re-read by every nested login
+# shell (and some tools re-exec one), which would otherwise stack duplicates
+# on each pass.
+path_prepend() {
+  [ -d "$1" ] || return 0
+  case ":$PATH:" in
+    *":$1:"*) ;;
+    *) PATH="$1:$PATH" ;;
+  esac
+}
+
+path_prepend "/opt/homebrew/sbin"
+path_prepend "$HOME/.local/bin"
+path_prepend "$HOME/go/bin"
+# krew installs kubectl plugins here; without it only kubectl-invoked ones work.
+path_prepend "$HOME/.krew/bin"
+# rustup is keg-only (conflicts with the `rust` formula), so its cargo/rustc
+# shims aren't linked into /opt/homebrew/bin.
+path_prepend "/opt/homebrew/opt/rustup/bin"
+path_prepend "$HOME/.cargo/bin"
+path_prepend "$HOME/.orbstack/bin"
+
+unset -f path_prepend
+export PATH

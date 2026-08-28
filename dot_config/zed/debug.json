@@ -1,0 +1,46 @@
+// Project `.zed/debug.json` shadows this file entirely rather than merging.
+// The docs name ~/Library/Application Support/Zed for macOS; Zed reads here.
+[
+  {
+    "label": "Go: debug package",
+    "adapter": "Delve",
+    "request": "launch",
+    "mode": "debug",
+    "program": ".",
+    "cwd": "$ZED_WORKTREE_ROOT",
+  },
+  {
+    "label": "Go: debug current file",
+    "adapter": "Delve",
+    "request": "launch",
+    "mode": "debug",
+    "program": "$ZED_FILE",
+  },
+  {
+    // Empty $ZED_SYMBOL (cursor outside a test func) runs the package's tests.
+    "label": "Go: debug test under cursor",
+    "adapter": "Delve",
+    "request": "launch",
+    "mode": "test",
+    "program": "$ZED_DIRNAME",
+    "args": ["-test.run", "$ZED_SYMBOL"],
+  },
+  {
+    // Xdebug connects back to the IDE, so this only listens. Zed flags
+    // `Missing property "program"`: zed-extensions/php#64.
+    "label": "PHP: Listen to Xdebug (container)",
+    "adapter": "Xdebug",
+    "request": "launch",
+    "port": 9003,
+    "pathMappings": { "/var/www/html": "$ZED_WORKTREE_ROOT" },
+  },
+  {
+    // For `make dev-env-deploy DEBUG=true HOST_PATH_ENABLE=true` — without the
+    // host path, Dockerfile.dev's COPY leaves breakpoints on a stale snapshot.
+    "label": "PHP: Listen to Xdebug (kind pod)",
+    "adapter": "Xdebug",
+    "request": "launch",
+    "port": 9003,
+    "pathMappings": { "/var/www/html": "$ZED_WORKTREE_ROOT" },
+  },
+]

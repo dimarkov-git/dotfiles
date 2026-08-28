@@ -1,0 +1,13 @@
+# Interactive zsh config — deliberately near-empty.
+#
+# zsh is the *login* shell here purely so GUI apps can resolve PATH (see the
+# header in ~/.zprofile). Day-to-day interactive work happens in Nushell,
+# launched by Ghostty via `command =` in dot_config/ghostty/config.
+#
+# So this file is only reached when a zsh prompt is opened by hand — a
+# fallback when nu's config is broken. Prompt, aliases and completion live in
+# dot_config/nushell/, not here; don't mirror them, it's a second surface to
+# keep in sync for a shell nobody uses.
+#
+# PATH belongs in ~/.zprofile, which runs for login shells — that's what
+# `shell-env` inspects. Setting it here would not reach GUI apps.

@@ -1,0 +1,336 @@
+## Category: Taps
+
+tap "derailed/k9s"
+tap "facebook/fb"
+tap "getsentry/xcodebuildmcp"
+tap "txn2/tap"
+
+## Category: Core CLI utilities
+
+# Clone of cat(1) with syntax highlighting and Git integration
+# why: pager for git diff via delta; bcat alias for paging-off reads
+brew "bat"
+
+## Category: Shell, navigation & history
+
+# Multi-shell multi-command argument completer
+brew "carapace"
+# Magical shell history with sync, search, and SQLite backend
+# why: Ctrl+R history (workspace-filtered); native nushell history stays on Up
+brew "atuin"
+
+## Category: Misc
+
+# Manage your dotfiles across multiple diverse machines, securely
+brew "chezmoi"
+
+## Category: Kubernetes
+
+# Cloud provider for KIND clusters
+# why: gives KIND clusters LoadBalancer support locally
+brew "cloud-provider-kind"
+
+## Category: Shell, navigation & history
+
+# Load/unload environment variables based on $PWD; integrates with nushell
+# via dot_config/nushell/autoload/direnv.nu
+# why: auto-load .envrc; nushell bridge in autoload/direnv.nu
+brew "direnv"
+
+## Category: Core CLI utilities
+
+# Modern, maintained replacement for ls
+# why: ll/la/lt aliases — never aliased over Nushell's ls (returns table)
+brew "eza"
+# Simple, fast and user-friendly alternative to find
+# why: find replacement; respects .gitignore by default
+brew "fd"
+# Command-line fuzzy finder written in Go
+brew "fzf"
+
+## Category: Languages & runtimes
+
+# Open-source, cross-platform JavaScript runtime environment
+brew "node"
+
+## Category: Git & GitHub
+
+# GitHub command-line tool
+brew "gh"
+# Distributed revision control system
+brew "git"
+# Syntax-highlighting pager for git, diff, and grep output (used in
+# dot_gitconfig.tmpl as core.pager and gh config.yml).
+# why: git pager via core.pager + side-by-side diffs in gh
+brew "git-delta"
+# GitLab command-line tool
+brew "glab"
+
+## Category: Languages & runtimes
+
+# Open source programming language to build simple/reliable/efficient software
+brew "go"
+
+## Category: Go tooling
+
+# Fast linters runner for Go
+brew "golangci-lint"
+
+## Category: Build & protobuf
+
+# New way of working with Protocol Buffers; `buf curl` replaces grpcurl
+brew "buf"
+
+## Category: Core CLI utilities
+
+# A command-line benchmarking tool — wraps timing for `hyperfine 'cmd-a' 'cmd-b'`
+# style A/B comparisons.
+brew "hyperfine"
+
+## Category: Kubernetes
+
+# Kubernetes package manager
+brew "helm@3", link: true
+
+## Category: Core CLI utilities
+
+# Command-line pager for JSON data
+brew "jless"
+
+# Lightweight and flexible command-line JSON processor
+brew "jq"
+
+## Category: Git & GitHub
+
+# Simple terminal UI for git commands
+brew "lazygit"
+
+## Category: Kubernetes
+
+# Run local Kubernetes cluster in Docker
+brew "kind"
+# Kubernetes command-line interface
+brew "kubernetes-cli"
+# Package manager for kubectl plugins
+brew "krew"
+
+## Category: Build dependencies
+
+# Postgres C API library
+brew "libpq"
+
+## Category: Languages & runtimes
+
+# Modern shell for the GitHub era
+# why: primary shell; configured under dot_config/nushell
+brew "nushell"
+
+## Category: SSH & secrets
+
+# OpenBSD freely-licensed SSH connectivity tools
+brew "openssh"
+
+## Category: iOS / Swift
+
+# Identify unused code in Swift projects
+brew "periphery"
+
+## Category: Build dependencies
+
+# Execute binaries from Python packages in isolated environments
+brew "pipx"
+
+## Category: Core CLI utilities
+
+# Search tool like grep and The Silver Searcher
+# why: default grep; used by Zed/fzf/atuin under the hood
+brew "ripgrep"
+
+## Category: Languages & runtimes
+
+# Cargo subcommand for checking and applying updates to installed executables
+brew "cargo-update"
+# Rust toolchain installer (provides cargo for nushell plugins)
+brew "rustup"
+
+## Category: Shell scripts (bash) tooling
+
+# Static analysis and lint tool, for (ba)sh scripts — picked up by bash-language-server in Zed
+brew "shellcheck"
+# Autoformat shell script source code — used as Zed Shell Script formatter
+brew "shfmt"
+
+## Category: Shell, navigation & history
+
+# Cross-shell prompt for astronauts
+brew "starship"
+
+## Category: Core CLI utilities
+
+# Resource monitor: process viewer for Linux, OSX, and FreeBSD
+brew "btop"
+
+## Category: iOS / Swift
+
+# Formatting tool for reformatting Swift code
+brew "swiftformat"
+# Tool to enforce Swift style and conventions
+brew "swiftlint"
+
+## Category: Kubernetes
+
+# Tail multiple Kubernetes pods & their containers
+# why: kubectl logs is single-pod and dies with the pod; stern reattaches
+brew "stern"
+
+## Category: Core CLI utilities
+
+# Very fast implementation of tldr in Rust
+brew "tealdeer"
+
+# User interface to the TELNET protocol
+brew "telnet"
+
+## Category: Shell, navigation & history
+
+# Blazing fast terminal file manager written in Rust, based on async I/O
+# why: TUI file manager with KGP image previews in Ghostty; aliased y
+brew "yazi"
+
+## Category: Core CLI utilities
+
+# Process YAML, JSON, XML, CSV and properties documents from the CLI
+brew "yq"
+
+## Category: Shell, navigation & history
+
+# Shell extension to navigate your filesystem faster
+brew "zoxide"
+
+## Category: Languages & runtimes
+
+# UNIX shell (command interpreter)
+brew "zsh"
+
+## Category: Kubernetes
+
+# Kubernetes CLI To Manage Your Clusters In Style!
+brew "derailed/k9s/k9s"
+
+## Category: iOS / Swift
+
+# A Powerful Command Line for automating iOS Simulators
+brew "facebook/fb/idb-companion"
+# Model Context Protocol server for Xcode project workflows
+brew "getsentry/xcodebuildmcp/xcodebuildmcp"
+
+## Category: Kubernetes
+
+# Bulk port-forward k8s services to localhost (sudo required)
+brew "txn2/tap/kubefwd"
+
+## Category: SSH & secrets
+
+# NOTE: the 1Password *app* is deliberately NOT here — it is installed by hand
+# from 1password.com before this repo is even cloned, because its SSH agent
+# holds the git key (see docs/bootstrap.md step 5). It self-updates via
+# Sparkle, so brew has nothing to add. Listed in docs/manual-installs.md.
+# The CLI below is a separate package and is not covered by that install.
+#
+# 1Password command-line — `op read op://...` for secret access in scripts.
+# Distributed as a signed pkg, hence cask (not a brew formula).
+# why: op read op://... for secret access in scripts
+cask "1password-cli"
+
+## Category: Core CLI utilities
+
+# Open source IDE for exploring and testing APIs
+cask "bruno"
+
+# Native GUI tool for relational databases
+cask "tableplus"
+
+## Category: Fonts
+
+cask "font-jetbrains-mono-nerd-font"
+cask "font-symbols-only-nerd-font"
+
+## Category: Kubernetes
+
+# Kubernetes IDE
+cask "freelens"
+
+## Category: Editors & terminal
+
+# Terminal emulator that uses platform-native UI and GPU acceleration
+cask "ghostty"
+
+# Multiplayer code editor
+cask "zed"
+
+## Category: Communication & browsing
+
+# Web browser
+cask "google-chrome"
+
+# Team communication and collaboration software
+cask "slack"
+
+# why: the native macOS client, not the Qt `telegram-desktop` build
+cask "telegram"
+
+# Video communication and virtual meeting platform
+cask "zoom"
+
+## Category: Containers & VMs
+
+# Replacement for Docker Desktop
+cask "orbstack"
+
+## Category: Misc
+
+# why: global option+space toggle for Ghostty — see dot_hammerspoon/init.lua
+cask "hammerspoon"
+
+# Free and open-source media player
+cask "iina"
+
+# why: kills Cmd+Q globally — App Shortcuts can't, it matches menu titles per app
+cask "karabiner-elements"
+
+# why: Apple Music auto sample-rate switching is iOS-only; macOS resamples
+cask "losslessswitcher"
+
+# Free and open-source OpenVPN client
+cask "tunnelblick"
+
+## Category: Go tooling
+
+go "golang.org/x/tools/cmd/deadcode"
+go "github.com/go-delve/delve/cmd/dlv"
+go "github.com/daixiang0/gci"
+go "github.com/t-yuki/gocover-cobertura"
+go "github.com/zarldev/goenums"
+go "mvdan.cc/gofumpt"
+go "golang.org/x/tools/gopls"
+go "gotest.tools/gotestsum"
+go "github.com/99designs/gqlgen"
+go "github.com/go-kratos/kratos/cmd/kratos/v2"
+go "github.com/google/pprof"
+go "google.golang.org/protobuf/cmd/protoc-gen-go"
+go "google.golang.org/grpc/cmd/protoc-gen-go-grpc"
+go "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway"
+go "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2"
+go "honnef.co/go/tools/cmd/staticcheck"
+go "github.com/google/wire/cmd/wire"
+
+# Per-machine extra Go tools, sourced from chezmoi data `workGoTools`
+# (a list of full module paths). Unset/empty → no extra entries.
+{{- range (index . "workGoTools" | default list) }}
+go "{{ . }}"
+{{- end }}
+
+## Category: Kubernetes
+
+# why: OIDC login for work clusters; krew tracks upstream, the brew tap lagged
+krew "oidc-login"

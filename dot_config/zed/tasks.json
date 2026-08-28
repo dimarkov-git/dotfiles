@@ -1,0 +1,136 @@
+// No host PHP — the Makefile's `docker-run-%` rule runs everything in the
+// builder image. Every PHP repo here shares that rule, so these are global.
+[
+  {
+    // Empty FILTER (cursor outside a symbol) runs the whole file.
+    "label": "PHP: tests (run)",
+    // Runs as `zsh -c '<command>'`, so `args` would land in $0/$1 instead of
+    // reaching make. Inner quotes keep each VAR=value one word after expansion.
+    "command": "make docker-run-code-tests \"FILTER=$ZED_SYMBOL\" \"ARGS=$ZED_RELATIVE_FILE\"",
+    // Reusing the tab SIGTERMs each rerun.
+    "use_new_terminal": true,
+    "allow_concurrent_runs": true,
+    // Tag the PHP extension binds gutter runnables to; overriding it replaces
+    // its host `./vendor/bin/phpunit`.
+    "tags": ["phpunit-test"],
+    "reveal": "always",
+    "save": "all",
+  },
+  {
+    "label": "PHP: tests (Unit)",
+    "command": "make docker-run-code-tests-unit",
+    "reveal": "always",
+    "save": "all",
+  },
+  {
+    "label": "PHP: tests (Feature)",
+    "command": "make docker-run-code-tests-feature",
+    "reveal": "always",
+    "save": "all",
+  },
+  {
+    "label": "PHP: tests (all)",
+    "command": "make docker-run-code-tests",
+    "reveal": "always",
+    "save": "all",
+  },
+  {
+    "label": "PHP: phpstan",
+    "command": "make docker-run-phpstan-analysis",
+    "reveal": "always",
+    "save": "all",
+  },
+  {
+    "label": "PHP: phpstan (current file)",
+    "command": "make docker-run-phpstan-analysis \"ARGS=$ZED_RELATIVE_FILE\"",
+    "reveal": "always",
+    "save": "all",
+  },
+  {
+    "label": "PHP: run current file",
+    "command": "make docker-run-execute-file \"ARGS=$ZED_RELATIVE_FILE\"",
+    "use_new_terminal": true,
+    "allow_concurrent_runs": true,
+    "reveal": "always",
+    "save": "all",
+  },
+  {
+    // Start "PHP: Listen to Xdebug (container)" from the debugger panel first.
+    "label": "PHP: debug current file",
+    "command": "make docker-run-execute-file DEBUG=true \"ARGS=$ZED_RELATIVE_FILE\"",
+    "use_new_terminal": true,
+    "allow_concurrent_runs": true,
+    "reveal": "always",
+    "save": "all",
+  },
+  {
+    "label": "PHP: php-cs-fixer (write)",
+    "command": "make docker-run-coding-standards",
+    "reveal": "always",
+    "save": "all",
+  },
+  {
+    "label": "PHP: quality check (it)",
+    "command": "make docker-run-it",
+    "reveal": "always",
+    "save": "all",
+  },
+  {
+    // Start "PHP: Listen to Xdebug (container)" from the debugger panel first.
+    "label": "PHP: debug test under cursor",
+    "command": "make docker-run-code-tests DEBUG=true \"FILTER=$ZED_SYMBOL\" \"ARGS=$ZED_RELATIVE_FILE\"",
+    "use_new_terminal": true,
+    "allow_concurrent_runs": true,
+    "reveal": "always",
+    "save": "all",
+  },
+  {
+    // Registry comes from the project's .env; the Makefile appends `-prod`.
+    "label": "PHP: shell in container",
+    "command": ". ./.env && docker run --rm -it --entrypoint '' -v \"./:/var/www/html:delegated\" -w /var/www/html \"${DOCKER_REGISTRY}-prod/php-tools:${PHP_BUILDER_IMAGE_VERSION}\" bash",
+    "use_new_terminal": true,
+    "reveal": "always",
+  },
+  {
+    "label": "Go: test package",
+    "command": "go test ./...",
+    "reveal": "always",
+    "save": "all",
+  },
+  {
+    "label": "Go: test under cursor",
+    "command": "go test -run \"$ZED_SYMBOL\" \"./$ZED_RELATIVE_DIR/...\"",
+    "reveal": "always",
+    "save": "all",
+  },
+  {
+    "label": "Go: lint",
+    "command": "golangci-lint run",
+    "reveal": "always",
+    "save": "all",
+  },
+  {
+    // jq cannot edit in place; save: all flushes the buffer first, and Zed
+    // reloads the file once the task rewrites it.
+    "label": "JSON: inflate file (unescape nested)",
+    "command": "jq -f ~/.config/zed/json-inflate.jq \"$ZED_FILE\" > \"$ZED_FILE.tmp\" && mv \"$ZED_FILE.tmp\" \"$ZED_FILE\" || { rm -f \"$ZED_FILE.tmp\"; exit 1; }",
+    "reveal": "no_focus",
+    "hide": "on_success",
+    "save": "all",
+  },
+  {
+    "label": "JSON: deflate file body (re-escape)",
+    "command": "jq '.body |= tojson' \"$ZED_FILE\" > \"$ZED_FILE.tmp\" && mv \"$ZED_FILE.tmp\" \"$ZED_FILE\" || { rm -f \"$ZED_FILE.tmp\"; exit 1; }",
+    "reveal": "no_focus",
+    "hide": "on_success",
+    "save": "all",
+  },
+  {
+    // use_new_terminal: the prompt needs its own tty to read from.
+    "label": "Scratch: new file in .notes",
+    "command": "~/.config/zed/new-scratch.sh",
+    "use_new_terminal": true,
+    "reveal": "always",
+    "hide": "on_success",
+  },
+]

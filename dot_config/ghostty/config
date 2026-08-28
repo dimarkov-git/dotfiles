@@ -1,0 +1,98 @@
+# Reload live with Cmd+Shift+R (bound below).
+
+command = /opt/homebrew/bin/nu
+shell-integration = detect
+# ssh-env forwards TERM/COLORTERM via SetEnv (OpenSSH 8.7+); ssh-terminfo
+# installs ghostty's terminfo on the remote on first connect.
+shell-integration-features = cursor,sudo,title,ssh-env,ssh-terminfo
+
+# Relies on OSC 7 from the shell integration on every prompt.
+window-inherit-working-directory = true
+tab-inherit-working-directory = true
+split-inherit-working-directory = true
+
+# The `Mono` variant is strictly monospaced — required so powerline glyphs and
+# devicons stay inside one cell and don't break eza/yazi/k9s alignment.
+font-family = "JetBrainsMono Nerd Font Mono"
+font-size = 14
+# Core Text renders these slightly thin on retina. macOS-only.
+font-thicken = true
+# Split ligatures under the cursor so editing inside one stays positionally
+# precise; elsewhere they still render as a single glyph.
+font-shaping-break = cursor
+
+theme = "light:Catppuccin Latte,dark:Catppuccin Mocha"
+
+# Floor on text-vs-background contrast, nudging unreadable colors from
+# misbehaving CLI tools. 1.5, not the WCAG AA 4.5 — higher values override
+# intentionally muted palette colors.
+minimum-contrast = 1.5
+
+# macOS default `native` blends in gamma space, fringing saturated text
+# against the translucent background.
+alpha-blending = linear-corrected
+
+window-padding-x = 10
+window-padding-y = 10
+# Kills the 1px jitter on the trailing column when the cell grid doesn't
+# divide the window evenly.
+window-padding-balance = true
+# `never`, not `always`: anything that pokes a closed Ghostty over AppleScript
+# would otherwise restore the whole saved session instead of nothing.
+window-save-state = never
+macos-titlebar-style = tabs
+
+# `true` prompts only when a child process is running; `always` would nag on
+# idle shells too.
+confirm-close-surface = true
+
+background-opacity = 0.92
+background-blur = true
+
+cursor-style = block
+cursor-style-blink = true
+# Catppuccin Rosewater — contrasts against both the dark Mocha background and
+# the cream Latte one, so it works under either theme.
+cursor-color = "#f5e0dc"
+# Keeps the character under a stationary cursor readable.
+cursor-opacity = 0.85
+
+# Path is relative to this file, so it resolves wherever chezmoi deploys it.
+custom-shader = shaders/cursor_blaze.glsl
+# `always` keeps the trail animating when the window loses focus. Without it,
+# focus loss switches the cursor to hollow-block, firing a cursor-change event
+# that can freeze the trail mid-animation.
+custom-shader-animation = always
+
+# Not the default cmd+shift+, — it collides with macOS-level handlers and
+# doesn't fire reliably.
+keybind = cmd+shift+r=reload_config
+keybind = cmd+comma=open_config
+
+# Drop-down terminal. NOT cmd+`: that is macOS's built-in "move focus to next
+# window", and binding it globally would steal it from every other app.
+keybind = global:ctrl+grave_accent=toggle_quick_terminal
+quick-terminal-position = top
+quick-terminal-screen = main
+
+# Multi-character key names (`left_bracket`, `grave_accent`, …) match by
+# physical position, so these survive an RU input source where those keys
+# produce х/ъ. Single letters follow the layout, but macOS transliterates
+# Cmd+<letter> across input sources.
+keybind = cmd+d=new_split:right
+keybind = cmd+shift+d=new_split:down
+keybind = cmd+left_bracket=goto_split:previous
+keybind = cmd+right_bracket=goto_split:next
+keybind = cmd+shift+left_bracket=previous_tab
+keybind = cmd+shift+right_bracket=next_tab
+keybind = cmd+enter=toggle_split_zoom
+keybind = cmd+shift+w=close_surface
+
+# KeyC/KeyV are layout-independent physical codes; default super+c/v match by
+# codepoint, so RU input produces "с" instead of copying.
+keybind = cmd+KeyC=copy_to_clipboard
+keybind = cmd+KeyV=paste_from_clipboard
+
+copy-on-select = clipboard
+mouse-hide-while-typing = true
+clipboard-trim-trailing-spaces = true

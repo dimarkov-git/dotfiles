@@ -1,0 +1,11 @@
+# Paths are relative to $HOME, not to this directory — chezmoi resolves nested
+# ignore files against the destination root.
+#
+# Whitelist, not blocklist: Claude Code adds runtime directories every release,
+# so ignoring everything unlisted is the only form that survives an upgrade.
+.claude/*
+!.claude/CLAUDE.md
+!.claude/settings.json
+!.claude/agents
+!.claude/hooks
+!.claude/skills

@@ -1,0 +1,177 @@
+{{/* Templated git config. Identity and any company-internal hosts live in
+   chezmoi data — set via `chezmoi edit-config` or directly in
+   ~/.config/chezmoi/chezmoi.toml under [data]:
+
+       [data]
+       gitName       = "Your Name"
+       gitEmail      = "you@example.com"
+       gitSigningKey = "ssh-ed25519 AAAA..."       # optional; public key, see below
+       gitlabHost    = "gitlab.example.com"        # optional; enables ssh-rewrite
+       gitWorkDir    = "~/dev-zone/acme/"          # optional; enables the work
+                                                   # identity include, see bottom
+
+   When a key is missing, the corresponding section is simply omitted —
+   git will prompt for identity on first commit, and the ssh-rewrite block
+   stays out of the rendered file.
+
+   The identity above is the DEFAULT one (personal). A second identity for
+   work repos lives in dot_gitconfig-work.tmpl and is pulled in by the
+   [includeIf] block at the very bottom of this file.
+
+   Commit signing is SSH-based via 1Password's agent, NOT GPG. gitSigningKey
+   holds the *public* half of the same key used for ssh auth (`ssh-ed25519
+   AAAA...`, one line, as shown in 1Password → key → "public key"). The
+   private half never leaves the vault; op-ssh-sign asks the agent to sign.
+   Setting gitSigningKey to a GPG fingerprint will NOT work — see the
+   [gpg] section below for why the two are not interchangeable.
+
+   Verifying them locally is a separate trust list, keyed by email:
+   dot_config/git/private_allowed_signers.tmpl.
+*/ -}}
+{{- if or (index . "gitName") (index . "gitEmail") (index . "gitSigningKey") -}}
+[user]
+{{- if index . "gitName" }}
+	name = {{ index . "gitName" }}
+{{- end }}
+{{- if index . "gitEmail" }}
+	email = {{ index . "gitEmail" }}
+{{- end }}
+{{- if index . "gitSigningKey" }}
+	signingkey = {{ index . "gitSigningKey" }}
+{{- end }}
+{{ end }}
+
+[alias]
+	co = checkout
+	ci = commit
+	st = status
+	br = branch
+
+	branch-name = "!git rev-parse --abbrev-ref HEAD"
+	bn = branch-name
+
+	hist = log --pretty=format:\"%h %ad | %s%d [%an]\" --graph --date=short
+
+	type = cat-file -t
+	dump = cat-file -p
+
+	# Push the current branch to the remote "origin", and set it to track the upstream branch
+	publish = "!git push -u origin $(git branch-name)"
+
+	# Delete the remote version of the current branch
+	unpublish = "!git push origin :$(git branch-name)"
+
+	# Delete a branch and recreate it from the default branch.
+	# Useful when a topic branch and the base have diverged badly.
+	recreate = "!f() { [[ -n $@ ]] && git checkout \"$@\" && git unpublish && git checkout main && git branch -D \"$@\" && git checkout -b \"$@\" && git publish; }; f"
+
+[core]
+	autocrlf = input
+	safecrlf = true
+	quotepath = off
+	# Use delta as the pager for diff/log/show. Side-by-side diffs, syntax
+	# highlighting, line numbers — drop-in for vanilla diff. Falls back to
+	# `less` automatically if delta isn't installed (git just errors on the
+	# pager and shows raw text). `brew install git-delta` to enable.
+	pager = delta
+
+[interactive]
+	# `git add -p` etc. also go through delta with --color-only so prompts
+	# remain readable.
+	diffFilter = delta --color-only
+
+[delta]
+	navigate = true       # n / N to jump between hunks inside the pager
+	line-numbers = true
+	side-by-side = true
+	# delta resolves syntax themes via bat's theme set; "Catppuccin Mocha" is
+	# the same name used in dot_config/bat/config (bat themes ship with Catppuccin
+	# starting from delta 0.18+).
+	syntax-theme = Catppuccin Mocha
+
+[init]
+	templatedir = ~/.git-templates
+	defaultBranch = main
+
+[pull]
+	# Rebase by default on `git pull` — cleaner history than merge commits.
+	rebase = true
+
+[push]
+	# `git push` on a new branch automatically sets upstream — no more
+	# "fatal: The current branch X has no upstream branch" errors.
+	autoSetupRemote = true
+
+[fetch]
+	# Drop tracking refs for branches deleted upstream. Keeps `git branch -r`
+	# accurate without manual `git remote prune`.
+	prune = true
+
+[commit]
+	# Signing is on only when gitSigningKey is set — otherwise git would fail
+	# every commit with "unable to start editor"-style errors about a missing
+	# key, which is a hostile default on a machine that hasn't been set up yet.
+	gpgsign = {{ if index . "gitSigningKey" }}true{{ else }}false{{ end }}
+	# Show the staged diff in the commit message editor — easier to write
+	# accurate subject lines without leaving the editor for `git diff --cached`.
+	verbose = true
+
+[rerere]
+	# Reuse Recorded Resolution: git remembers how you resolved a merge
+	# conflict and auto-applies the same resolution next time the same
+	# conflict appears. Massive time saver during long rebases.
+	enabled = true
+
+[merge]
+	# Diff3 style shows the common ancestor in conflict markers, in addition
+	# to "ours" and "theirs" — much easier to choose the right resolution.
+	conflictstyle = zdiff3
+
+[diff]
+	# `git diff` uses delta via core.pager (above). These tweaks tune the
+	# diff content itself, before the pager renders it.
+	algorithm = histogram
+	colorMoved = default
+
+{{- if index . "gitSigningKey" }}
+
+# SSH signing via 1Password's agent, no key on disk. The forge needs the key
+# uploaded a SECOND time as a *signing* key, or commits show "Unverified".
+[gpg]
+	format = ssh
+
+[gpg "ssh"]
+	# Ships inside the app bundle; path is stable across 1Password updates.
+	program = /Applications/1Password.app/Contents/MacOS/op-ssh-sign
+	# Verification only; without it --show-signature says "No signature" on
+	# commits git itself just signed.
+	allowedSignersFile = ~/.config/git/allowed_signers
+{{- end }}
+
+{{- if index . "gitlabHost" }}
+[url "ssh://git@{{ .gitlabHost }}/"]
+	insteadOf = https://{{ .gitlabHost }}/
+{{- end }}
+
+{{- if index . "gitWorkDir" }}
+
+# Work identity for repos under gitWorkDir; everything above is the personal
+# default. Must stay below [user] — git takes the last value for a key.
+[includeIf "gitdir:{{ index . "gitWorkDir" | trimSuffix "/" }}/"]
+	path = ~/.gitconfig-work
+{{- end }}
+
+{{- if index . "gitlabHost" }}
+
+# GitLab behaviour, scoped by remote URL rather than by path (needs git 2.36+).
+# Four patterns, all required: a clone may store any of the three URL forms,
+# and the scp-style one needs `:*` for root repos plus `:*/**` for subgroups.
+[includeIf "hasconfig:remote.*.url:ssh://git@{{ .gitlabHost }}/**"]
+	path = ~/.gitconfig-gitlab
+[includeIf "hasconfig:remote.*.url:https://{{ .gitlabHost }}/**"]
+	path = ~/.gitconfig-gitlab
+[includeIf "hasconfig:remote.*.url:git@{{ .gitlabHost }}:*"]
+	path = ~/.gitconfig-gitlab
+[includeIf "hasconfig:remote.*.url:git@{{ .gitlabHost }}:*/**"]
+	path = ~/.gitconfig-gitlab
+{{- end }}

@@ -1,0 +1,244 @@
+{
+  "theme": {
+    "mode": "system",
+    "light": "Catppuccin Latte",
+    "dark": "Catppuccin Mocha",
+  },
+  "icon_theme": {
+    "mode": "system",
+    "light": "Catppuccin Latte",
+    "dark": "Catppuccin Mocha",
+  },
+  "ui_font_family": "JetBrainsMono Nerd Font Mono",
+  "ui_font_size": 16,
+  "buffer_font_family": "JetBrainsMono Nerd Font Mono",
+  "buffer_font_size": 16,
+  "buffer_line_height": "comfortable",
+
+  // Default Zed keymap over the JetBrains preset — the preset is incomplete.
+  "vim_mode": false,
+
+  "project_panel": { "dock": "left" },
+  "outline_panel": { "dock": "left" },
+  "collaboration_panel": { "dock": "left" },
+  "git_panel": { "dock": "left", "tree_view": true },
+  "agent": { "dock": "right" },
+  // Button hidden — Ghostty is the terminal of record; the panel is still
+  // reachable from the command palette.
+  "terminal": {
+    "button": false,
+    "dock": "bottom",
+  },
+
+  "autosave": "on_focus_change",
+  "relative_line_numbers": "disabled",
+  "current_line_highlight": "all",
+  "cursor_blink": true,
+  "scrollbar": { "show": "auto" },
+  "minimap": { "show": "auto" },
+  "tab_bar": { "show": true },
+  "tabs": {
+    "file_icons": true,
+    "git_status": true,
+    "show_diagnostics": "errors",
+  },
+  "close_on_file_delete": true,
+  "diagnostics": {
+    "inline": { "enabled": true },
+  },
+  "toolbar": {
+    "breadcrumbs": true,
+    "quick_actions": true,
+    "selections_menu": true,
+  },
+  "gutter": {
+    "line_numbers": true,
+    "runnables": true,
+    "breakpoints": true,
+    "folds": true,
+  },
+  "soft_wrap": "none",
+  "show_whitespaces": "selection",
+
+  // Needs BOTH this and the per-LSP hints below (lsp.gopls
+  // .initialization_options.hints) — flipping one alone shows nothing.
+  "inlay_hints": {
+    "enabled": true,
+    "show_type_hints": true,
+    "show_parameter_hints": true,
+    "show_other_hints": true,
+    "edit_debounce_ms": 700,
+  },
+
+  "diff_view_style": "split",
+  "cli_default_open_behavior": "new_window",
+
+  "git": {
+    "inline_blame": { "show_commit_summary": true },
+    "branch_picker": { "show_author_name": true },
+  },
+
+  // Off by default; gopls also needs its own `codelenses` block below.
+  "code_lens": "on",
+
+  // LSP tokens layered over tree-sitter — intelephense distinguishes
+  // properties from methods, which tree-sitter alone cannot.
+  "semantic_tokens": "combined",
+
+  // .ctmpl is consul-template over YAML; yaml-ls tolerates the directives.
+  "file_types": {
+    "YAML": ["*.ctmpl", "*.yml.ctmpl"],
+  },
+
+  "lsp": {
+    "gopls": {
+      "initialization_options": {
+        "gofumpt": true,
+        "usePlaceholders": true,
+        "staticcheck": true,
+        "codelenses": {
+          "test": true,
+          "generate": true,
+          "tidy": true,
+          "upgrade_dependency": true,
+        },
+        "hints": {
+          "assignVariableTypes": true,
+          "compositeLiteralFields": true,
+          "compositeLiteralTypes": true,
+          "constantValues": true,
+          "functionTypeParameters": true,
+          "parameterNames": true,
+          "rangeVariableTypes": true,
+        },
+      },
+    },
+    "yaml-language-server": {
+      "settings": {
+        "yaml": {
+          "keyOrdering": false,
+          "validate": true,
+          "hover": true,
+          "completion": true,
+          "format": {
+            "enable": true,
+            "singleQuote": false,
+            "bracketSpacing": true,
+          },
+          // On top of auto-discovered SchemaStore; an inline
+          // `# yaml-language-server: $schema=...` still wins over these.
+          "schemas": {
+            "https://json.schemastore.org/github-workflow.json": [
+              ".github/workflows/*.yml",
+              ".github/workflows/*.yaml",
+            ],
+            "https://json.schemastore.org/gitlab-ci.json": [
+              ".gitlab-ci.yml",
+              ".gitlab/*.yml",
+            ],
+            "https://json.schemastore.org/golangci-lint.json": [
+              ".golangci.yml",
+              ".golangci.yaml",
+            ],
+            "kubernetes": ["k8s/**/*.yaml", "manifests/**/*.yaml"],
+          },
+        },
+      },
+    },
+    "helm": {
+      "settings": {
+        "helm-ls": {
+          "logLevel": "info",
+          "yamlls": {
+            "enabled": true,
+            "enabledForFilesGlob": "*.{yaml,yml}",
+          },
+        },
+      },
+    },
+  },
+
+  "languages": {
+    "Go": {
+      "format_on_save": "on",
+      "formatter": "language_server",
+      "code_actions_on_format": { "source.organizeImports": true },
+      "tab_size": 4,
+      "hard_tabs": true,
+    },
+    "PHP": {
+      // phpantom misses references to constructor-promoted properties; only
+      // intelephense's rename is licence-gated, find-references is free.
+      "language_servers": [
+        "intelephense",
+        "!phpantom",
+        "!phpactor",
+        "!phptools",
+        "...",
+      ],
+      "tab_size": 4,
+      // Formatting belongs to the project's pre-commit hook; Zed defaults to
+      // "on". Only save is governed — cmd-shift-i still formats.
+      "format_on_save": "off",
+      "formatter": "language_server",
+    },
+    "JSON": {
+      "format_on_save": "off",
+      "formatter": { "language_server": { "name": "biome" } },
+      "code_actions_on_format": {
+        "source.fixAll.biome": true,
+        "source.organizeImports.biome": true,
+        "source.action.useSortedAttributes.biome": true,
+        "source.action.useSortedKeys.biome": true,
+        "source.action.useSortedProperties.biome": true,
+      },
+    },
+    "YAML": {
+      "format_on_save": "off",
+      "formatter": "language_server",
+      "tab_size": 2,
+    },
+    "Helm": {
+      "tab_size": 2,
+    },
+    "Dockerfile": {
+      "format_on_save": "on",
+    },
+    "Shell Script": {
+      "format_on_save": "on",
+      // -i 2 -bn -ci: 2-space indent, binary ops at line start, indent cases.
+      "formatter": {
+        "external": {
+          "command": "shfmt",
+          "arguments": ["-i", "2", "-bn", "-ci", "-"],
+        },
+      },
+    },
+  },
+
+  // Installed on startup. Removing a key does NOT uninstall — use the
+  // extensions panel for that.
+  "auto_install_extensions": {
+    "catppuccin": true,
+    "catppuccin-icons": true,
+    "php": true, // bundles intelephense, phpactor, phpantom, phptools
+    "golangci-lint": true, // secondary LSP next to gopls
+    "helm": true, // bundles helm-ls
+    "dockerfile": true,
+    "html": true,
+    "biome": true, // JSON formatter; fetches its own binary via npm
+    "nu": true,
+    "make": true,
+    "lua": true, // Hammerspoon config
+    "sql": true,
+    "git-firefly": true, // syntax for COMMIT_EDITMSG, .gitconfig, rebase todo
+  },
+
+  "show_edit_predictions": true,
+
+  "agent_servers": {
+    "claude-acp": { "type": "registry" },
+  },
+
+  "telemetry": { "diagnostics": true, "metrics": true },
+}

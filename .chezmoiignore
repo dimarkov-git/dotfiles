@@ -1,0 +1,25 @@
+LICENSE
+README.md
+CLAUDE.md
+Brewfile
+Brewfile.lock.json
+Makefile
+docs
+scripts
+
+# Source for /etc/hosts, installed by run_onchange_after_08 via sudo.
+etc
+
+# Zed runtime state — conversations, prompts, themes, db are large/private
+# and per-machine. Only settings.json + keymap.json are tracked.
+.config/zed/conversations
+.config/zed/prompts
+.config/zed/themes
+.config/zed/db
+
+# gh auth state (tokens) — never sync; run `gh auth login` per machine.
+.config/gh/hosts.yml
+
+# Karabiner rewrites these on every GUI change; only assets/ is managed.
+.config/karabiner/karabiner.json
+.config/karabiner/automatic_backups

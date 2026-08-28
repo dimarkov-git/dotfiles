@@ -1,0 +1,63 @@
+# Encryption key, session token and history.db live under
+# ~/.local/share/atuin/ — per-machine state, not under chezmoi. The key must
+# match on every device; back it up in 1Password.
+#
+# Ctrl-R only: nushell's own SQLite history drives Up arrow. Two parallel
+# histories is deliberate — don't consolidate them.
+
+auto_sync = true
+sync_frequency = "10m"
+
+search_mode = "fuzzy"
+
+# `workspaces = true` is what makes the workspace filter selectable at all;
+# without it the mode is silently skipped.
+workspaces = true
+filter_mode = "workspace"
+
+# Top-level keys must precede every table header: TOML folds anything after a
+# `[table]` into it, and atuin ignores the misplaced key without warning.
+style = "compact"
+inline_height = 25
+
+# Drop the picked command into the prompt instead of running it — insurance
+# against firing a stale `rm -rf` / `kubectl delete` straight from history.
+enter_accept = false
+
+# Typos and failed runs are never worth recalling; keeps fuzzy matches clean.
+store_failed = false
+
+# Adds to atuin's built-in secret regexes, which already cover AWS/GitHub/
+# Slack/Stripe tokens.
+history_filter = [
+    "^op ",
+    "^pass ",
+    "AWS_SECRET",
+    "AWS_ACCESS_KEY_ID",
+    "PRIVATE_KEY",
+    "BEGIN RSA",
+    "BEGIN OPENSSH",
+    "--api-key",
+    "--token[= ]",
+    "ctx7sk-",
+
+    # Navigation and no-ops: never worth a Ctrl-R hit, and they crowd out
+    # real matches in fuzzy search.
+    "^(clear|exit|pwd|ls|ll|la|top|btop|fg|bg|q|y|n|k|g|v|c)$",
+    "^(cd|z|ls|ll)\\s",
+]
+
+[search]
+filters = ["workspace", "directory", "global", "session"]
+
+# Records carry a `shell` field since 18.18; the "auto" default would hide
+# synced zsh/bash commands from Ctrl-R.
+shells = "all"
+
+[ui]
+columns = [
+    "duration",
+    "time",
+    { type = "directory", width = 24 },
+    "command",
+]

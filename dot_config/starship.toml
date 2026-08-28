@@ -1,0 +1,59 @@
+# Everything not listed here uses Starship's defaults.
+
+# Naming $kubernetes moves it past the git blocks; $all skips it as a dupe.
+format = "$directory$git_branch$git_commit$git_state$git_metrics$git_status$kubernetes$all$character"
+
+# Above the 500 ms default: version-probe modules (`go version`, node, …) can
+# breach it on the first call per session while Gatekeeper verifies the
+# binary, emitting [WARN] lines. A ceiling, not a delay.
+command_timeout = 2000
+
+# Triggers in any dir with buf.yaml and shells out to `buf --version` — same
+# Gatekeeper stall as above, on every prompt in proto-heavy Go projects.
+[buf]
+disabled = true
+
+# Single Docker context (orbstack) — no signal.
+[docker_context]
+disabled = true
+
+# Nerd Font glyphs instead of emoji: they match the eza icon style and inherit
+# the prompt color instead of being forced into Apple Color Emoji.
+
+# Teal, not the default bold cyan — the small monochrome glyph rendered too
+# dim on the dark background.
+[golang]
+symbol = " "
+style = "bold #94e2d5"
+
+# 2 s threshold hides fast commands; long builds/tests get a marker.
+[cmd_duration]
+min_time = 2_000
+format = "[ $duration]($style) "
+style = "bold yellow"
+
+# direnv unloads silently on cd-out; without this you lose track of injected
+# env vars.
+[direnv]
+disabled = false
+symbol = "󰉋 "
+format = "[$symbol$loaded/$allowed]($style) "
+# Catppuccin Peach — "orange" is not a valid starship color name.
+style = "bold #fab387"
+
+# Off by default upstream. A wrong context only matters when it isn't the local
+# cluster, so kind renders muted and everything else is loud.
+[kubernetes]
+disabled = false
+format = '[\[$symbol$context( \($namespace\))\]]($style) '
+symbol = "󱃾 "
+style = "bold #f38ba8"
+
+# context_aliases is deprecated; per-context rules live in this array.
+[[kubernetes.contexts]]
+context_pattern = "^kind-.*"
+style = "#9399b2"
+context_alias = "local"
+
+[aws]
+symbol = " "

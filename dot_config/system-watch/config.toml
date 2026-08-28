@@ -1,0 +1,191 @@
+# system-watch — what to monitor on this machine.
+#
+# Hybrid by necessity: macOS $HOME is far too noisy for blacklist-only
+# discovery, but a pure whitelist misses "an agent created a file nobody
+# expected". So [discovery] lists broad roots wide and shallow (names + kind
+# only), [hashing] records sha256/size/mtime for a narrow whitelist, and
+# [commands] stores read-only command output verbatim.
+#
+# Hashing NEVER stores file content, which is why ~/.aws/credentials and
+# ~/.kube/config are safe to list here.
+
+[discovery]
+default_depth = 3
+include_hidden = true
+
+# {path, depth}; omit depth for default_depth.
+roots = [
+  { path = "~/", depth = 2 },
+  { path = "~/Desktop/", depth = 1 },
+  { path = "~/Documents/", depth = 1 },
+  { path = "~/dev-zone/", depth = 2 },
+  { path = "~/Projects/", depth = 2 },
+
+  { path = "/Applications/", depth = 1 },
+  { path = "~/Applications/", depth = 1 },
+
+  # Persistence vectors (autorun, kexts, helpers)
+  { path = "/Library/LaunchAgents/", depth = 2 },
+  { path = "/Library/LaunchDaemons/", depth = 2 },
+  { path = "/Library/PrivilegedHelperTools/", depth = 1 },
+  { path = "/Library/Extensions/", depth = 1 },
+  { path = "/Library/SystemExtensions/", depth = 1 },
+  { path = "~/Library/LaunchAgents/", depth = 2 },
+
+  # depth=1 on ~/Library/ deliberately: depth=2 pulled in 583 Preferences
+  # plists and drowned the signal. Hash the plists you care about instead.
+  { path = "~/Library/", depth = 1 },
+  { path = "~/Library/Application Support/", depth = 2 },
+  # Containers / Group Containers left out — UUID-named sandbox dirs. New
+  # sandboxed apps still show up under Application Support.
+  { path = "~/Library/Services/", depth = 1 },
+  { path = "~/Library/Input Methods/", depth = 1 },
+  { path = "~/Library/Keyboard Layouts/", depth = 1 },
+  { path = "~/Library/QuickLook/", depth = 1 },
+  { path = "~/Library/Screen Savers/", depth = 1 },
+  { path = "~/Library/Fonts/", depth = 1 },
+
+  { path = "/opt/homebrew/etc/", depth = 4 },
+  { path = "/opt/homebrew/Library/Taps/", depth = 2 },
+
+  { path = "/etc/sudoers.d/", depth = 1 },
+]
+
+# Skipped at any nested level. Keeps walk time bounded.
+ignore_patterns = [
+  "**/Caches/**",
+  "**/Cache/**",
+  "**/Logs/**",
+  "**/Crash*/**",
+  "**/.Trash/**",
+  "**/Cookies/**",
+  "**/HTTPStorages/**",
+  "**/Saved Application State/**",
+  "**/WebKit/**",
+
+  "**/Library/Metadata/CoreSpotlight/**",
+  "**/Library/Mail/**",
+  "**/.Spotlight-V100/**",
+  "**/.fseventsd/**",
+  "**/.DocumentRevisions-V100/**",
+  "**/.TemporaryItems/**",
+
+  "**/node_modules/**",
+  "**/.venv/**",
+  "**/__pycache__/**",
+  "**/.cargo/registry/**",
+  "**/.cargo/git/**",
+  "**/.pnpm-store/**",
+  "**/.npm/_cacache/**",
+  "**/.gradle/caches/**",
+  "**/.rustup/**",
+  "**/target/**",
+  "**/build/**",
+  "**/dist/**",
+  "**/.next/**",
+  "**/.nuxt/**",
+
+  "**/.git/**",
+  "**/.DS_Store",
+  "**/.localized",
+
+  "**/Library/Application Scripts/**",
+  "**/Library/Containers/**/Data/**",
+  "**/Library/Mobile Documents/**",
+  "**/Library/Preferences/ByHost/**",
+
+  # AI agents: watch their CONFIG (settings.json, CLAUDE.md, plugin
+  # manifests), not their RUNTIME (transcripts, history, telemetry).
+  "**/.claude/projects/**",
+  "**/.claude/file-history/**",
+  "**/.claude/todos/**",
+  "**/.claude/telemetry/**",
+  "**/.claude/logs/**",
+  "**/.claude/backups/**",
+  "**/.claude/paste-cache/**",
+  "**/.claude/tasks/**",
+  "**/.claude/plans/**",
+  "**/.claude/statsig/**",
+  "**/.claude/plugins/marketplaces/**/*", # payloads only — plugins/config.json stays tracked for the install list
+  "**/.claude/history.jsonl",
+]
+
+[hashing]
+# {path, recursive, depth}; single files use recursive=false.
+paths = [
+  { path = "~/Library/LaunchAgents/", recursive = true, depth = 2 },
+  { path = "/Library/LaunchAgents/", recursive = true, depth = 2 },
+  { path = "/Library/LaunchDaemons/", recursive = true, depth = 2 },
+  { path = "/Library/PrivilegedHelperTools/", recursive = true, depth = 1 },
+
+  { path = "~/.config/", recursive = true, depth = 4 },
+  { path = "~/.gitconfig", recursive = false },
+  { path = "~/.gitignore_global", recursive = false },
+  { path = "~/.npmrc", recursive = false },
+  { path = "~/.editorconfig", recursive = false },
+  { path = "~/.cargo/config.toml", recursive = false },
+  { path = "~/.tool-versions", recursive = false },
+  { path = "~/.docker/config.json", recursive = false },
+  { path = "~/.docker/daemon.json", recursive = false },
+  { path = "~/.kube/config", recursive = false },
+  { path = "~/.aws/config", recursive = false },
+  { path = "~/.aws/credentials", recursive = false },
+  { path = "~/.ssh/config", recursive = false },             # config only — NOT keys
+  { path = "~/.zshrc", recursive = false },
+  { path = "~/.profile", recursive = false },
+  { path = "~/.netrc", recursive = false },
+  { path = "~/.curlrc", recursive = false },
+  { path = "~/.wgetrc", recursive = false },
+  { path = "~/.python_history", recursive = false },
+
+  { path = "/opt/homebrew/etc/", recursive = true, depth = 5 },
+  { path = "/etc/hosts", recursive = false },
+  { path = "/etc/sudoers.d/", recursive = true, depth = 1 },
+
+  # Selective plists — extend per app you tweak.
+  { path = "~/Library/Preferences/com.apple.dock.plist", recursive = false },
+  { path = "~/Library/Preferences/com.apple.finder.plist", recursive = false },
+  { path = "~/Library/Preferences/com.apple.systempreferences.plist", recursive = false },
+  { path = "~/Library/Preferences/com.apple.symbolichotkeys.plist", recursive = false },
+  { path = "~/Library/Preferences/com.mitchellh.ghostty.plist", recursive = false },
+  { path = "~/Library/Preferences/dev.zed.Zed.plist", recursive = false },
+
+  # AI tooling writes here outside chezmoi.
+  { path = "~/.claude/", recursive = true, depth = 4 },
+]
+
+[commands]
+brew_leaves       = "brew leaves"
+brew_casks        = "brew list --cask"
+brew_taps         = "brew tap"
+brew_outdated     = "brew outdated"
+pkg_receipts      = "pkgutil --pkgs | sort"
+
+# Catches `curl|sh` installers dropping binaries straight onto PATH.
+brew_bin          = "ls /opt/homebrew/bin/ 2>/dev/null | sort"
+local_bin         = "ls ~/.local/bin/ 2>/dev/null | sort"
+
+launchctl_user    = "launchctl list"
+login_items       = "osascript -e 'tell application \"System Events\" to get the name of every login item' 2>/dev/null || true"
+
+# Catches CFPreferences changes invisible in the plist files. Avoid a full
+# `defaults read com.apple.finder` — it serializes per-folder window state, so
+# the diff churns on every window move. Read specific keys instead.
+defaults_dock     = "defaults read com.apple.dock"
+defaults_global   = "defaults read NSGlobalDomain"
+defaults_ghostty  = "defaults read com.mitchellh.ghostty 2>/dev/null || true"
+defaults_zed      = "defaults read dev.zed.Zed 2>/dev/null || true"
+defaults_domains  = "defaults domains | tr ',' '\\n' | sort"
+finder_settings   = "for k in ShowPathbar AppleShowAllFiles _FXSortFoldersFirst FXPreferredViewStyle ShowStatusBar; do echo \"$k = $(defaults read com.apple.finder $k 2>/dev/null || echo unset)\"; done"
+
+network_resolvers = "scutil --dns | grep -E 'nameserver|domain'"
+network_services  = "networksetup -listallnetworkservices"
+sys_extensions    = "systemextensionsctl list 2>/dev/null || true"
+mdm_profiles      = "profiles list 2>/dev/null || true"
+dns_resolvers     = "ls /etc/resolver/ 2>/dev/null || true"
+etc_paths_d       = "ls /etc/paths.d/ 2>/dev/null"
+hostname          = "scutil --get LocalHostName 2>/dev/null; scutil --get ComputerName 2>/dev/null; hostname"
+wifi_known        = "networksetup -listpreferredwirelessnetworks en0 2>/dev/null | tail -n +2 | sort || true"
+crontab_user      = "crontab -l 2>/dev/null || true"
+ssh_known_hosts   = "wc -l < ~/.ssh/known_hosts 2>/dev/null || echo 0"
+ssh_authorized    = "stat -f '%N: %z bytes, mtime %Sm' ~/.ssh/authorized_keys 2>/dev/null || echo 'no authorized_keys'"

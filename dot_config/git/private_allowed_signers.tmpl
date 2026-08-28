@@ -1,0 +1,14 @@
+{{/* Trust list for verifying SSH commit signatures — ssh-keygen(1) ALLOWED
+   SIGNERS format, not gitconfig. Signing needs only user.signingkey; without
+   this, --show-signature reports "No signature" on signed commits.
+
+   Both identities share one file: git matches on committer email, not on the
+   active [includeIf]. namespaces="git" stops a signature made elsewhere from
+   being replayed as a commit signature.
+*/ -}}
+{{- if and (index . "gitEmail") (index . "gitSigningKey") -}}
+{{ index . "gitEmail" }} namespaces="git" {{ index . "gitSigningKey" }}
+{{ end }}
+{{- if and (index . "gitWorkEmail") (index . "gitWorkSigningKey") -}}
+{{ index . "gitWorkEmail" }} namespaces="git" {{ index . "gitWorkSigningKey" }}
+{{ end }}

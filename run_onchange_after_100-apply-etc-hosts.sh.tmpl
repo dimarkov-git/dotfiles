@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# /etc/hosts is outside destDir and root:wheel, so chezmoi cannot manage it
+# directly — `make apply` runs unprivileged.
+#
+# .tmpl because run_onchange_* scripts execute from a tempdir, making sourceDir
+# the only reliable way to find the source file. The hash re-runs this on edit.
+# hosts-hash: {{ include "etc/hosts" | sha256sum }}
+
+set -euo pipefail
+
+SRC="{{ .chezmoi.sourceDir }}/etc/hosts"
+DST="/etc/hosts"
+
+[ -f "$SRC" ] || { echo "etc/hosts missing at $SRC; skipping"; exit 0; }
+
+cmp -s "$SRC" "$DST" && exit 0
+
+echo "/etc/hosts differs from the repo copy:"
+diff -u "$DST" "$SRC" || true
+
+# A declined password must not fail the apply chain: every other target already
+# succeeded by this point.
+if ! sudo -p "sudo password to update /etc/hosts (^C to skip): " \
+        install -m 644 -o root -g wheel "$SRC" "$DST"; then
+    echo "WARNING: /etc/hosts left unchanged. Re-run 'make apply' to retry." >&2
+    exit 0
+fi
+
+# Resolution is cached; without a flush the old mapping survives.
+sudo dscacheutil -flushcache 2>/dev/null || true
+sudo killall -HUP mDNSResponder 2>/dev/null || true
+echo "/etc/hosts updated."

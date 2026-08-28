@@ -1,0 +1,55 @@
+# No private keys on disk: 1Password's agent holds them and serves the socket
+# at the bottom, which is why this file can be repo material. A fresh machine
+# needs 1Password with the SSH agent enabled BEFORE the first clone (see
+# docs/bootstrap.md).
+#
+# Deliberately no `IdentityFile`, `AddKeysToAgent` or `UseKeychain` — all three
+# manage on-disk keys, which this setup does not have.
+#
+# The `private_` prefixes deploy dir and file 0700/0600; OpenSSH ignores a
+# group/world-readable config.
+#
+# ORDERING IS LOAD-BEARING: ssh_config takes the FIRST value it sees per
+# option, so Includes and Host blocks must precede the catch-all `Host *`.
+# A block placed after it silently does nothing.
+
+# OrbStack manages this file itself and requires it above any Host block.
+Include ~/.orbstack/ssh/config
+{{- if index . "gitlabHost" }}
+
+# Port 22 on this host is closed and fails with "Connection refused", which
+# reads like the server being down. Without this block, every clone and every
+# `go install` of a private module breaks that way.
+#
+# `nc -z` reports the port closed even while it works — the split-tunnel VPN
+# routes by hostname and a zero-payload probe never triggers it. Use
+# `nc -w 8 <host> 32322 </dev/null` to see the real SSH banner.
+Host {{ .gitlabHost }}
+	Port {{ index . "gitlabSshPort" | default 32322 }}
+{{- end }}
+{{- if index . "sshHosts" }}
+
+# Work hosts come from chezmoi data so internal topology stays out of git.
+# Add a host in ~/.config/chezmoi/chezmoi.toml, not here.
+{{- $defaultUser := index . "sshUser" }}
+{{- range (index . "sshHosts") }}
+
+Host {{ .host }}
+{{- if index . "hostname" }}
+	Hostname {{ .hostname }}
+{{- end }}
+{{- $u := or (index . "user") $defaultUser }}
+{{- if $u }}
+	User {{ $u }}
+{{- end }}
+{{- if index . "proxyJump" }}
+	ProxyJump {{ .proxyJump }}
+{{- end }}
+{{- range (index . "options" | default list) }}
+	{{ . }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+Host *
+	IdentityAgent "~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"

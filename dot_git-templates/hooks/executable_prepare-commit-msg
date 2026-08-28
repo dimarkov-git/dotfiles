@@ -1,0 +1,27 @@
+#!/bin/bash
+
+REPO_DIR=$(git rev-parse --show-toplevel)
+DOT_GIT_DIR=$(git rev-parse --git-dir)
+if [ "$DOT_GIT_DIR" = ".git" ]; then
+  DOT_GIT_DIR="$REPO_DIR"/"$DOT_GIT_DIR"
+fi
+
+# Include any branches for which you wish to disable this script
+if [ -z "$BRANCHES_TO_SKIP" ]; then
+  BRANCHES_TO_SKIP=(main master develop staging test)
+fi
+
+# Succeed on all merge messages, as evidenced by MERGE_MSG existing
+[ -f $DOT_GIT_DIR/MERGE_MSG ] && exit 0
+
+# Get the current branch name and check if it is excluded
+BRANCH_NAME=$(git symbolic-ref --short HEAD)
+BRANCH_EXCLUDED=$(printf "%s\n" "${BRANCHES_TO_SKIP[@]}" | grep -c "^$BRANCH_NAME$")
+
+# A developer has already prepended the commit in the format [BRANCH_NAME]
+BRANCH_IN_COMMIT=$(grep -c "\[$BRANCH_NAME\]" $1)
+
+# If it isn't excluded, preprend the trimmed branch identifier to the given message
+if [ -n "$BRANCH_NAME" ] && ! [[ $BRANCH_EXCLUDED -eq 1 ]] && ! [[ $BRANCH_IN_COMMIT -ge 1 ]]; then
+  sed -i.bak -e "1s|^|[$BRANCH_NAME] |" "$1" && rm -f "$1.bak"
+fi

@@ -1,0 +1,21 @@
+{
+  "title": "Disable Cmd+Q",
+  "rules": [
+    {
+      "description": "Disable Cmd+Q globally",
+      "manipulators": [
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "q",
+            "modifiers": {
+              "mandatory": ["command"],
+              "optional": ["caps_lock"]
+            }
+          },
+          "to": [{ "key_code": "vk_none" }]
+        }
+      ]
+    }
+  ]
+}

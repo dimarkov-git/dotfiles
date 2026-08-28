@@ -1,0 +1,12 @@
+# Image preview only; the rest runs on defaults. There is deliberately no
+# adapter setting — Yazi picks Kitty Graphics Protocol from terminfo
+# ($TERM=xterm-ghostty), not from config. Verify with `ya doctor`.
+#
+# After changing max_width/max_height run `yazi --clear-cache`, otherwise
+# thumbnails rendered at the old dimensions are served from cache.
+
+[preview]
+image_filter = "lanczos3"
+image_quality = 90
+max_width = 1500
+max_height = 1500

@@ -1,0 +1,58 @@
+#!/bin/bash
+# Fresh-machine bootstrap: install Homebrew if missing, then the Brewfile.
+#
+# `.tmpl` because run_once_* scripts execute from a tempdir, so
+# {{ .chezmoi.sourceDir }} is the only reliable way to locate Brewfile.tmpl.
+
+set -euo pipefail
+
+if ! command -v brew >/dev/null 2>&1; then
+    echo "Homebrew not found. Installing..."
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    if [[ -x /opt/homebrew/bin/brew ]]; then
+        eval "$(/opt/homebrew/bin/brew shellenv)"
+    elif [[ -x /usr/local/bin/brew ]]; then
+        eval "$(/usr/local/bin/brew shellenv)"
+    fi
+fi
+
+BREWFILE_TMPL="{{ .chezmoi.sourceDir }}/Brewfile.tmpl"
+BREWFILE="{{ .chezmoi.sourceDir }}/Brewfile"
+
+if [[ ! -f "$BREWFILE_TMPL" ]]; then
+    echo "ERROR: Brewfile.tmpl not found at $BREWFILE_TMPL"
+    exit 1
+fi
+
+chezmoi execute-template < "$BREWFILE_TMPL" > "$BREWFILE"
+
+# Tap trust lives in run_onchange_before_010-trust-brew-taps.sh.tmpl, which runs
+# before this script and re-runs whenever Brewfile.tmpl changes.
+
+{{- if index . "gitlabHost" }}
+
+# `go "..."` entries shell out to `go install`, but GOPRIVATE lives in env.nu
+# — Nushell, which this run_once_BEFORE script predates. Exported here so the
+# module proxy and checksum DB are skipped for a host they cannot reach.
+export GOPRIVATE="{{ .gitlabHost }}"
+export GONOSUMDB="{{ .gitlabHost }}{{ if index . "extraGonosumdb" }},{{ .extraGonosumdb }}{{ end }}"
+
+# Probe once so an unreachable host yields one clear warning instead of one
+# opaque git error per private tool. Never fatal: ssh here is on a
+# non-standard port set by ~/.ssh/config, which this script also predates, so
+# private tools legitimately fail on the very first apply.
+if ! GIT_TERMINAL_PROMPT=0 git ls-remote --exit-code -h \
+        "https://{{ .gitlabHost }}/" >/dev/null 2>&1; then
+    echo "" >&2
+    echo "NOTE: cannot reach {{ .gitlabHost }} yet." >&2
+    echo "      Usually the VPN being off, or ~/.ssh/config not written yet" >&2
+    echo "      (ssh here uses a non-standard port, set by the first apply)." >&2
+    echo "      Public packages still install; private go tools will be skipped." >&2
+    echo "      Once connected, finish them with:" >&2
+    echo "        brew bundle install --file=$BREWFILE" >&2
+    echo "" >&2
+fi
+{{- end }}
+
+echo "Installing Brewfile bundle from $BREWFILE..."
+brew bundle install --file="$BREWFILE"

@@ -1,0 +1,12 @@
+// Additions on top of Zed's default keymap.
+[
+  {
+    // IDEA "Search Everywhere" muscle memory.
+    "context": "Workspace",
+    "bindings": {
+      "shift shift": "file_finder::Toggle",
+      // Pairs with cmd-n: that opens a scratch buffer, this one a real file.
+      "cmd-alt-n": ["task::Spawn", { "task_name": "Scratch: new file in .notes" }],
+    },
+  },
+]
