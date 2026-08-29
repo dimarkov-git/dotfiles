@@ -144,7 +144,6 @@ function M.buildMenu(st)
 
     item("-")
     item("Refresh now", { fn = function() M.refresh() end })
-    item("Open repo in Zed", { fn = function() hs.execute("/opt/homebrew/bin/zed " .. REPO) end })
     return menu
 end
 

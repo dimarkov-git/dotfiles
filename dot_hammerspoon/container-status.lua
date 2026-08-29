@@ -1,5 +1,5 @@
 -- Menubar indicator for the container stack: OrbStack engine, docker containers,
--- and the active kube context's reachability. Click opens a webview panel.
+-- and the active kube context's reachability.
 
 local M = {}
 
@@ -36,7 +36,6 @@ M.orbTimer = nil
 M.k8sTimer = nil
 M.statsTimer = nil
 M.localCtxTimer = nil
-M.panel = nil
 M.power = nil
 
 -- Long-lived: the probes run on independent clocks and each owns its fields.
@@ -50,7 +49,6 @@ local RED = "#f38ba8"    -- Red
 local YELLOW = "#f9e2af" -- Peach
 local SUBTLE = "#9399b2" -- Overlay2
 local TEXT = "#cdd6f4"   -- Text
-local BASE = "#1e1e2e"   -- Base
 
 -- Nerd Font glyphs, not emoji: Apple Color Emoji bakes its own colours and
 -- ignores styledtext's, so an emoji whale could never show engine state.
@@ -58,14 +56,8 @@ local DOCKER_GLYPH = "\u{e7b0}"
 local K8S_GLYPH = "\u{f10fe}"
 local GLYPH_FONT = "JetBrainsMono NF"
 
-local PANEL_W = 300
-local ROW_H = 21
-local SEP_H = 17
-local FOOTER_H = 27
-local PANEL_PAD = 28
 
 -- JS reaches Lua through this handler name; it must match on both sides.
-local BRIDGE = "hsContainerStatus"
 
 local function exists(path)
     return hs.fs.attributes(path) ~= nil
@@ -333,25 +325,29 @@ local function probeDisk(done)
     if task then task:start() else done() end
 end
 
+-- Menu rows are single strings, so label and value are padded apart to a fixed
+-- column. Menlo keeps the value column aligned; the label font is the default.
+local ROW_W = 34
+
 local function row(label, value, tint)
-    return string.format(
-        '<div class="row"><span class="k">%s</span><span class="v" style="color:%s">%s</span></div>',
-        label, tint or TEXT, value)
+    local pad = ROW_W - utf8.len(label) - utf8.len(value)
+    local text = label .. string.rep(" ", math.max(pad, 2)) .. value
+    return { title = hs.styledtext.new(text, {
+        font = { name = "Menlo", size = 12 },
+        color = { hex = tint or TEXT },
+    }), disabled = true }
 end
 
--- Returns the markup and the height it needs: rows vary with what's running,
--- and a fixed frame would leave dead space under the last row.
-local function panelHTML(st)
-    local body, rows, seps = {}, 0, 0
+function M.buildMenu()
+    local st = M.state
+    local menu = {}
 
     local function add(...)
-        table.insert(body, row(...))
-        rows = rows + 1
+        table.insert(menu, row(...))
     end
 
     local function sep()
-        table.insert(body, '<div class="sep"></div>')
-        seps = seps + 1
+        table.insert(menu, { title = "-" })
     end
 
     local orbTint = st.orb == "running" and GREEN or SUBTLE
@@ -419,88 +415,9 @@ local function panelHTML(st)
         add("context", "none", SUBTLE)
     end
 
-    local height = rows * ROW_H + seps * SEP_H + FOOTER_H + PANEL_PAD
-
-    -- The rounded corner must live on an inner box: a background on `body`
-    -- fills the window rect and squares it off regardless of border-radius.
-    return string.format([[
-<style>
-  html, body { margin:0; height:100%%; background:transparent;
-               -webkit-user-select:none; }
-  .card { box-sizing:border-box; height:100%%; padding:14px 16px;
-          font: 13px -apple-system, system-ui; color:%s;
-          background:%s; border-radius:10px; }
-  .row { display:flex; justify-content:space-between; align-items:baseline;
-         padding:3px 0; }
-  .k { color:%s; }
-  .v { font-family: Menlo, monospace; font-size:12px; }
-  .sep { height:1px; background:%s; opacity:.25; margin:8px 0; }
-  .foot { display:flex; justify-content:flex-end; margin-top:6px; }
-  button { font: 11px -apple-system, system-ui; color:%s; background:transparent;
-           border:1px solid %s; border-radius:5px; padding:2px 9px; cursor:pointer; }
-  button:hover { color:%s; border-color:%s; }
-  button:active { opacity:.6; }
-  button.busy { opacity:.45; pointer-events:none; }
-</style>
-<div class="card">%s
-  <div class="foot"><button id="r">refresh</button></div>
-</div>
-<script>
-  var b = document.getElementById("r");
-  b.onclick = function () {
-    b.classList.add("busy");
-    webkit.messageHandlers.%s.postMessage("refresh");
-  };
-</script>]], TEXT, BASE, SUBTLE, SUBTLE, SUBTLE, SUBTLE, TEXT, TEXT,
-    table.concat(body), BRIDGE), height
-end
-
--- Anchored under the menubar item; its frame is nil until first drawn, hence
--- the screen-corner fallback.
-local function panelFrame(height)
-    local f = M.bar and M.bar:frame()
-    if f then
-        return { x = f.x + f.w - PANEL_W, y = f.y + f.h + 4, w = PANEL_W, h = height }
-    end
-    local s = hs.screen.mainScreen():frame()
-    return { x = s.x + s.w - PANEL_W - 12, y = s.y + 12, w = PANEL_W, h = height }
-end
-
-function M.hidePanel()
-    if M.panel then
-        M.panel:delete()
-        M.panel = nil
-    end
-end
-
-function M.showPanel()
-    M.hidePanel()
-
-    local html, height = panelHTML(M.state)
-
-    -- Rebuilt per show: the handler is bound to the webview it was created with.
-    local bridge = hs.webview.usercontent.new(BRIDGE):setCallback(function()
-        M.refresh()
-    end)
-
-    -- `nonactivating` keeps focus in the current app; without `transparent` the
-    -- window paints an opaque sheet that squares off the CSS corner radius.
-    M.panel = hs.webview.new(panelFrame(height), {}, bridge)
-        :windowStyle({ "borderless", "nonactivating" })
-        :level(hs.canvas.windowLevels.floating)
-        :behavior(hs.canvas.windowBehaviors.canJoinAllSpaces)
-        :transparent(true)
-        :allowTextEntry(false)
-        :shadow(true)
-        :html(html)
-        :show()
-
-    -- Shown from cache up to K8S_INTERVAL old; render() repaints when it lands.
-    M.refresh()
-end
-
-function M.togglePanel()
-    if M.panel then M.hidePanel() else M.showPanel() end
+    table.insert(menu, { title = "-" })
+    table.insert(menu, { title = "Refresh now", fn = function() M.refresh() end })
+    return menu
 end
 
 local render
@@ -524,15 +441,13 @@ render = function()
 
     -- Engine down: kind nodes are containers too, so every segment would be grey.
     if st.orb ~= "running" then
-        -- The panel is dismissed by clicking the item that is about to vanish.
-        M.hidePanel()
         M.bar:removeFromMenuBar()
         return
     end
     M.bar:returnToMenuBar()
 
-    -- Re-armed on every render: a callback set while hidden never fires.
-    M.bar:setClickCallback(function() M.togglePanel() end)
+    -- Rebuilt per open, so a menu held open shows the state it was opened with.
+    M.bar:setMenu(function() return M.buildMenu() end)
 
     -- Coloured per segment, not as a whole: one tint would paint a healthy
     -- docker red just because the kind cluster stopped answering.
@@ -547,7 +462,7 @@ render = function()
     local title = segment(DOCKER_GLYPH, dockerTint, GLYPH_FONT)
         .. segment(string.format(" %d", st.running), dockerTint)
 
-    -- Only the dev cluster gets a glyph — the active context is panel-only. Nodes
+    -- Only the dev cluster gets a glyph — the active context is menu-only. Nodes
     -- up with no context is a kubeconfig gap, not a broken cluster: stay neutral.
     if st.kindRunning then
         local tint = not st.localContext and SUBTLE or (st.localUp and GREEN or RED)
@@ -555,13 +470,6 @@ render = function()
     end
 
     M.bar:setTitle(title)
-
-    -- Repaint in place; recreating it would flicker. Row count varies, so does the frame.
-    if M.panel then
-        local html, height = panelHTML(st)
-        M.panel:html(html)
-        M.panel:frame(panelFrame(height))
-    end
 
     -- Re-pace each clock to what it's watching, mirroring pollXdebugPort in init.lua.
     if M.orbTimer then
