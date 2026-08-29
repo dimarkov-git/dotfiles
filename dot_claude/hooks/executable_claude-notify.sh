@@ -17,7 +17,7 @@ ntype=$(field notification_type)
 cwd=$(field cwd)
 file="$STATE_DIR/$session_id.json"
 
-term_id=$(/usr/bin/sed -n 's/.*"terminal_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$file" 2>/dev/null | head -1)
+tty_name=$(/usr/bin/sed -n 's/.*"tty"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$file" 2>/dev/null | head -1)
 
 # Stamp the wait so elapsed time survives across ticks; the menubar reads it back.
 if [ -f "$file" ]; then
@@ -26,12 +26,13 @@ fi
 
 [ -x "$HS" ] || exit 0
 
+# A blocked session is worth interrupting for; a merely idle one can wait.
 case "$ntype" in
-    permission_prompt)   title="🔐 Claude — needs permission" ;;
-    elicitation_dialog)  title="❓ Claude — question" ;;
-    agent_needs_input)   title="👋 Agent — needs input" ;;
-    agent_completed)     title="✅ Agent — done" ;;
-    *)                   title="✳ Claude — waiting for input" ;;
+    permission_prompt)   title="🔐 Claude — needs permission"; urgent=true ;;
+    elicitation_dialog)  title="❓ Claude — question";          urgent=true ;;
+    agent_needs_input)   title="👋 Agent — needs input";        urgent=true ;;
+    agent_completed)     title="✅ Agent — done";               urgent=false ;;
+    *)                   title="✳ Claude — waiting for input";  urgent=false ;;
 esac
 
 # A payload title is more specific than the type-derived one.
@@ -41,6 +42,6 @@ payload_title=$(field title)
 # Escaped for Lua: a prompt echoed into the message can carry quotes or newlines.
 esc() { printf '%s' "$1" | /usr/bin/sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/$/\\n/' | tr -d '\n'; }
 
-"$HS" -t 3 -c "claudeNotify(\"$(esc "$title")\", \"$(esc "${message:-waiting for input}")\", \"$(esc "${cwd##*/}")\", \"$(esc "$term_id")\", \"$(esc "$ntype")\")" >/dev/null 2>&1
+"$HS" -t 3 -c "claudeNotify(\"$(esc "$title")\", \"$(esc "${message:-waiting for input}")\", \"$(esc "${cwd##*/}")\", \"$(esc "$tty_name")\", \"$(esc "$ntype")\", $urgent)" >/dev/null 2>&1
 
 exit 0

@@ -290,8 +290,8 @@ local okTabs, tabsOrErr = pcall(function() return require("tab-state").start() e
 if okTabs then
     tabState = tabsOrErr
     -- Global entry point for the shell's slow-command hook (`hs -c`).
-    function tabNotify(title, message, termId)
-        tabState.notify(title, message, termId)
+    function tabNotify(title, message, tty)
+        tabState.notify(title, message, tty)
     end
 else
     hs.notify.new({ title = "tab-state failed", informativeText = tostring(tabsOrErr) }):send()
@@ -301,8 +301,8 @@ local okClaude, claudeOrErr = pcall(function() return require("claude-status").s
 if okClaude then
     claudeStatus = claudeOrErr
     -- Global entry point for ~/.claude/hooks/claude-notify.sh (`hs -c`).
-    function claudeNotify(title, message, dir, termId, kind)
-        claudeStatus.notify(title, message, dir, termId, kind)
+    function claudeNotify(title, message, dir, tty, kind, urgent)
+        claudeStatus.notify(title, message, dir, tty, kind, urgent)
     end
 else
     hs.notify.new({ title = "claude-status failed", informativeText = tostring(claudeOrErr) }):send()

@@ -5,6 +5,8 @@ local M = {}
 
 local STATE_DIR = os.getenv("HOME") .. "/.local/state/claude-sessions"
 
+local registry = require("tab-registry")
+
 M.bar = nil
 M.state = nil
 
@@ -29,17 +31,6 @@ local function firstGlyph(s)
     return s:sub(1, n)
 end
 
--- Frame per terminal id from the previous tick, so a changed frame reads as work
--- in progress. A session first seen is assumed running until a tick proves otherwise.
-M.lastFrame = {}
-
-local function classify(id, glyph)
-    local prev = M.lastFrame[id]
-    M.lastFrame[id] = glyph
-    if prev == nil then return "running" end
-    return prev ~= glyph and "running" or "waiting"
-end
-
 -- Strip the status glyph; what remains is the summary Claude put there.
 local function label(title)
     local g = firstGlyph(title)
@@ -58,48 +49,34 @@ local function ageLabel(secs)
     return string.format("%dh%02dm", secs // 3600, (secs % 3600) // 60)
 end
 
--- Timings keyed by terminal id. Hook-written, so a session started outside
--- Ghostty (or before the hooks existed) simply has none.
-local function readTimings()
-    local byTerm = {}
-    -- hs.fs.dir returns iterator AND state; dropping the second breaks iteration.
-    local ok, iter, dirObj = pcall(hs.fs.dir, STATE_DIR)
-    if not ok or not iter then return byTerm end
-    for file in iter, dirObj do
-        if file:sub(-5) == ".json" then
-            local fh = io.open(STATE_DIR .. "/" .. file)
-            if fh then
-                local body = fh:read("a")
-                fh:close()
-                local term = body:match('"terminal_id"%s*:%s*"([^"]*)"')
-                if term and term ~= "" then
-                    byTerm[term] = {
-                        started = tonumber(body:match('"started"%s*:%s*(%d+)')),
-                        waitingSince = tonumber(body:match('"waiting_since"%s*:%s*(%d+)')),
-                        -- nil when the session predates the status hook.
-                        busy = body:match('"busy"%s*:%s*(%a+)'),
-                    }
-                end
-            end
-        end
+-- Sessions as a list: two Claudes can share a tab over its lifetime, and a map
+-- keyed by tab would silently drop all but one.
+local function readSessions()
+    local ok, tabState = pcall(require, "tab-state")
+    if not ok then return {} end
+    return tabState.claudeSessions()
+end
+
+local function sessionForTty(tty)
+    for _, s in ipairs(readSessions()) do
+        if s.tty == tty then return s end
     end
-    return byTerm
+    return nil
 end
 
 -- Answering a permission prompt fires neither Stop nor UserPromptSubmit, so
 -- `busy` can't clear a wait — only a newer stamp or a click that nulls it can.
-function M.stillWaiting(termId, stamp)
-    local t = readTimings()[termId]
-    if not t then return false end
-    if t.busy == "true" then return false end
-    return t.waitingSince == stamp
+function M.stillWaiting(tty, stamp)
+    local s = sessionForTty(tty)
+    if not s then return false end
+    if s.busy == "true" then return false end
+    return s.waitingSince == stamp
 end
 
--- Clearing the stamp on click keeps the menubar from ageing a wait the user has
--- already answered. Files are keyed by session id, so the terminal is matched inside.
-function M.clearWaiting(termId)
-    termId = (termId or ""):match("^%s*(.-)%s*$")
-    if termId == "" then return end
+-- Keeps the menubar from ageing a wait the user has already answered.
+function M.clearWaiting(tty)
+    tty = (tty or ""):match("^%s*(.-)%s*$")
+    if tty == "" then return end
     local ok, iter, dirObj = pcall(hs.fs.dir, STATE_DIR)
     if not ok or not iter then return end
     for file in iter, dirObj do
@@ -109,7 +86,7 @@ function M.clearWaiting(termId)
             if fh then
                 local body = fh:read("a")
                 fh:close()
-                if body:match('"terminal_id"%s*:%s*"([^"]*)"') == termId then
+                if body:match('"tty"%s*:%s*"([^"]*)"') == tty then
                     local out = body:gsub('("waiting_since"%s*:%s*)[^,}%s]+', "%1null", 1)
                     local wh = io.open(path, "w")
                     if wh then wh:write(out); wh:close() end
@@ -120,51 +97,59 @@ function M.clearWaiting(termId)
     end
 end
 
+-- Tabs come from the poll, sessions from the hooks; a session whose tab is
+-- unresolved still lists, it just cannot be jumped to.
 local function parse(out)
-    local sessions = {}
-    local seen = {}
-    local timings = readTimings()
-    local now = os.time()
+    local tabByTty = {}
     for line in (out or ""):gmatch("[^\n]+") do
         local id, idx, sel, cwd, title =
             line:match("^(.-)" .. SEP .. "(.-)" .. SEP .. "(.-)" .. SEP .. "(.-)" .. SEP .. "(.*)$")
-        -- Membership from state files: title glyphs change with Claude's spinner.
-        local t = timings[id]
-        if t then
-            seen[id] = true
-            -- Hook-written truth; the glyph heuristic only covers sessions
-            -- started before the status hook existed.
-            local status
-            if t.busy == "true" then status = "running"
-            elseif t.busy == "false" then status = "waiting"
-            else status = classify(id, title and firstGlyph(title) or "") end
-            table.insert(sessions, {
-                id = id,
-                index = tonumber(idx),
-                selected = sel == "true",
-                cwd = cwd,
-                title = label(title),
-                status = status,
-                uptime = t.started and (now - t.started) or nil,
-                -- Only meaningful while idle: the stamp is not cleared on resume.
-                waiting = (status == "waiting" and t.waitingSince)
-                    and (now - t.waitingSince) or nil,
-            })
+        if id and id ~= "" then
+            local tty = registry.ttyForId(id)
+            if tty then
+                tabByTty[tty] = {
+                    id = id,
+                    index = tonumber(idx),
+                    selected = sel == "true",
+                    cwd = cwd,
+                    title = label(title),
+                }
+            end
         end
     end
 
-    -- Drop closed tabs, or their stale frame would misjudge a reused id.
-    for id in pairs(M.lastFrame) do
-        if not seen[id] then M.lastFrame[id] = nil end
+    local now = os.time()
+    local sessions = {}
+    for _, sess in ipairs(readSessions()) do
+        local tab = tabByTty[sess.tty]
+        local status = sess.busy == "true" and "running" or "waiting"
+        table.insert(sessions, {
+            tty = sess.tty,
+            id = tab and tab.id or nil,
+            index = tab and tab.index or nil,
+            selected = tab and tab.selected or false,
+            cwd = sess.cwd or (tab and tab.cwd) or "",
+            title = (tab and tab.title ~= "" and tab.title) or "Claude",
+            status = status,
+            uptime = sess.started and (now - sess.started) or nil,
+            -- Only meaningful while idle: the stamp is not cleared on resume.
+            waiting = (status == "waiting" and sess.waitingSince)
+                and (now - sess.waitingSince) or nil,
+        })
     end
+
+    table.sort(sessions, function(a, b)
+        if (a.index or 99) ~= (b.index or 99) then return (a.index or 99) < (b.index or 99) end
+        return a.tty < b.tty
+    end)
     return sessions
 end
 
 -- `focus` raises the terminal's window and follows it across Spaces, so the tab
--- need not be the selected one. False when the tab is gone.
-function M.focusTerminal(id)
+-- need not be the selected one. False when the tty has no resolved tab.
+function M.focusTty(tty)
     local ok, tabState = pcall(require, "tab-state")
-    return ok and tabState.focusTerminal(id)
+    return ok and tabState.focusTty(tty)
 end
 
 -- Last resort when no specific tab can be focused; without it the click looks
@@ -172,6 +157,12 @@ end
 local function activateGhostty()
     local app = hs.application.get("Ghostty")
     if app then app:activate() end
+end
+
+-- Repo root, so sessions in sibling worktrees group under one heading.
+local function projectOf(path)
+    local name = path:match("([^/]+)/%.claude/worktrees/") or path:match("([^/]+)$")
+    return name or path
 end
 
 function M.buildMenu()
@@ -186,19 +177,32 @@ function M.buildMenu()
     if #sessions == 0 then
         item("no Claude sessions", { disabled = true })
     else
+        local order, groups = {}, {}
         for _, s in ipairs(sessions) do
-            local glyph = s.status == "waiting" and WAITING or "•"
-            local mark = s.selected and "  ▸" or ""
-            item(string.format("%s %s%s", glyph, s.title, mark), {
-                fn = function()
-                    if not M.focusTerminal(s.id) then activateGhostty() end
-                end,
-            })
+            local key = projectOf(s.cwd)
+            if not groups[key] then groups[key] = {}; table.insert(order, key) end
+            table.insert(groups[key], s)
+        end
 
-            local meta = { tilde(s.cwd) }
-            if s.waiting then table.insert(meta, "waiting " .. ageLabel(s.waiting)) end
-            if s.uptime then table.insert(meta, "up " .. ageLabel(s.uptime)) end
-            item("      " .. table.concat(meta, "  ·  "), { disabled = true })
+        for gi, key in ipairs(order) do
+            if gi > 1 then item("-") end
+            -- Flat lists stop being readable past a handful of sessions.
+            if #order > 1 then item(key, { disabled = true }) end
+            for _, s in ipairs(groups[key]) do
+                local glyph = s.status == "waiting" and WAITING or "•"
+                local mark = s.selected and "  ▸" or ""
+                local pin = s.id and "" or "  ⚠"
+                item(string.format("%s %s%s%s", glyph, s.title, mark, pin), {
+                    fn = function()
+                        if not M.focusTty(s.tty) then activateGhostty() end
+                    end,
+                })
+
+                local meta = { tilde(s.cwd) }
+                if s.waiting then table.insert(meta, "waiting " .. ageLabel(s.waiting)) end
+                if s.uptime then table.insert(meta, "up " .. ageLabel(s.uptime)) end
+                item("      " .. table.concat(meta, "  ·  "), { disabled = true })
+            end
         end
     end
 
@@ -278,60 +282,65 @@ local function badge(kind)
     return badgeCache[hex]
 end
 
--- Answering within this window needs no banner; the wait is already over.
-local NOTIFY_DELAY = 8
+-- Idle waits are worth a delay; a blocked prompt is not, so it fires at once.
+local IDLE_DELAY = 30
 
--- Pending banners keyed by terminal id, so a second prompt from the same tab
--- replaces the first rather than queueing behind it.
+-- Pending banners keyed by tty, so a second prompt from the same tab replaces
+-- the first rather than queueing behind it.
 M.pending = {}
 
 -- True while the tab is both selected and Ghostty is frontmost — the user is
 -- looking straight at the prompt.
-local function tabIsWatched(termId)
+local function tabIsWatched(tty)
     local app = hs.application.get("Ghostty")
     if not (app and app:isFrontmost() and not app:isHidden()) then return false end
     for _, s in ipairs(M.state or {}) do
-        if s.id == termId then return s.selected end
+        if s.tty == tty then return s.selected end
     end
     return false
 end
 
--- Cancels a pending banner: the session stopped waiting on its own.
-function M.cancelPending(termId)
-    local t = M.pending[termId]
-    if t then t:stop(); M.pending[termId] = nil end
+function M.cancelPending(tty)
+    local t = M.pending[tty]
+    if t then t:stop(); M.pending[tty] = nil end
 end
 
 -- Called from ~/.claude/hooks/claude-notify.sh via `hs -c`. Clicking the banner
 -- jumps to the tab that raised it; withdrawn on click so it can't outlive the wait.
-function M.notify(title, message, dir, termId, kind)
-    termId = (termId or ""):match("^%s*(.-)%s*$")
-    -- No terminal to check against: nothing can prove the wait ended, so send.
-    if termId == "" then
-        M.send(title, message, dir, termId, kind)
+function M.notify(title, message, dir, tty, kind, urgent)
+    tty = (tty or ""):match("^%s*(.-)%s*$")
+    -- No tab to check against: nothing can prove the wait ended, so send.
+    if tty == "" then
+        M.send(title, message, dir, tty, kind)
+        return M.refresh()
+    end
+
+    M.cancelPending(tty)
+
+    if urgent then
+        if not tabIsWatched(tty) then M.send(title, message, dir, tty, kind) end
         return M.refresh()
     end
 
     -- Read before the delay: this is the wait this banner belongs to.
-    local stamp = (readTimings()[termId] or {}).waitingSince
+    local stamp = (sessionForTty(tty) or {}).waitingSince
 
-    M.cancelPending(termId)
-    M.pending[termId] = hs.timer.doAfter(NOTIFY_DELAY, function()
-        M.pending[termId] = nil
-        if not M.stillWaiting(termId, stamp) then return end
-        if tabIsWatched(termId) then return end
-        M.send(title, message, dir, termId, kind)
+    M.pending[tty] = hs.timer.doAfter(IDLE_DELAY, function()
+        M.pending[tty] = nil
+        if not M.stillWaiting(tty, stamp) then return end
+        if tabIsWatched(tty) then return end
+        M.send(title, message, dir, tty, kind)
     end)
     M.refresh()
 end
 
-function M.send(title, message, dir, termId, kind)
+function M.send(title, message, dir, tty, kind)
     local n = hs.notify.new(function(notif)
-        -- A stale id is treated as no id: both leave us with no tab to focus.
-        if not (termId and termId ~= "" and M.focusTerminal(termId)) then
+        -- An unresolved tty is treated as no tty: both leave us with no tab.
+        if not (tty and tty ~= "" and M.focusTty(tty)) then
             activateGhostty()
         end
-        if termId and termId ~= "" then M.clearWaiting(termId) end
+        if tty and tty ~= "" then M.clearWaiting(tty) end
         notif:withdraw()
         M.refresh()
     end, {

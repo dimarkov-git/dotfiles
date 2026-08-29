@@ -25,9 +25,16 @@ esac
 
 body=$(cat "$file")
 if printf '%s' "$body" | /usr/bin/grep -q '"busy"'; then
-    printf '%s' "$body" | /usr/bin/sed 's/"busy"[[:space:]]*:[[:space:]]*[^,}]*/"busy": '"$busy"'/' > "$file"
+    body=$(printf '%s' "$body" | /usr/bin/sed 's/"busy"[[:space:]]*:[[:space:]]*[^,}]*/"busy": '"$busy"'/')
 else
-    printf '%s' "$body" | /usr/bin/sed 's/"waiting_since"/"busy": '"$busy"', "waiting_since"/' > "$file"
+    body=$(printf '%s' "$body" | /usr/bin/sed 's/"waiting_since"/"busy": '"$busy"', "waiting_since"/')
 fi
+
+# Submitting a prompt answers whatever Claude was waiting on.
+if [ "$busy" = "true" ]; then
+    body=$(printf '%s' "$body" | /usr/bin/sed 's/"waiting_since"[[:space:]]*:[[:space:]]*[^,}]*/"waiting_since": null/')
+fi
+
+printf '%s' "$body" > "$file"
 
 exit 0

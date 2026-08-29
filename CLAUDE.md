@@ -91,16 +91,19 @@ is generated, not hand-written — it is deliberately absent from the tracked
 
 ### Session-to-tab pinning
 
-Notification clicks jump to the Ghostty tab named by `terminal_id` in
-`~/.local/state/claude-sessions/<session>.json`. The id comes from
-`GHOSTTY_TAB_ID`, which is unset whenever the hook runs outside a shell in that
-tab (resume, `--continue`) — so `claude-session-register.sh` inherits the stored
-id, validating it against `id of every terminal` first. Skip that check and a
-closed tab's id rides every resume forward.
+tty is the primary key across the shell (`tab-identity.nu`), the hooks
+(`dot_claude/hooks/`), and Hammerspoon (`tab-registry.lua`) — unique per tab and
+inherited, so resume and splits cannot collide the way a terminal id did.
 
-`hs.osascript.applescript` returns success as its *first* value; dropping it
-turns `focus` on a dead id into a silent no-op, which is indistinguishable from
-a broken notification. Every call site treats a stale id as no id.
+Ghostty exposes neither pid nor tty, so `focus` only takes a terminal id, which
+`tab-registry.lua` infers from cwd: a tab binds only when its cwd leaves exactly
+one unclaimed id. Two tabs opened in one directory therefore stay unbound until
+one is claimed, after which bindings persist until the shell or tab dies. An
+unresolved tty costs a jump (the banner raises Ghostty), never a merged session;
+`t-tabs | where tty == ""` lists them and the menubar marks them `⚠`.
+
+`t-tabs` returns raw data when piped and a formatted table on a terminal, so
+`where age > 1hr` works on durations rather than display strings.
 
 ## Mode-matching (`private_` prefix)
 

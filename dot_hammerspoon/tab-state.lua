@@ -68,52 +68,75 @@ local function esc(s)
         :gsub("[\1-\31]", ""))
 end
 
--- Claude sessions keyed by terminal id, so consumers of this file (t-tabs)
--- see one system rather than two. Written by ~/.claude/hooks/.
+-- Claude sessions keyed by tty, so consumers of this file (t-tabs) see one
+-- system rather than two. Written by ~/.claude/hooks/.
 local SESSION_DIR = os.getenv("HOME") .. "/.local/state/claude-sessions"
 
-local function claudeByTerm()
-    local byTerm = {}
+local registry = require("tab-registry")
+
+-- A tab can host several sessions over its life; only live ones are listed, so
+-- collisions surface as multiple entries instead of silently overwriting.
+function M.claudeSessions()
+    local sessions = {}
     local ok, iter, dirObj = pcall(hs.fs.dir, SESSION_DIR)
-    if not ok or not iter then return byTerm end
+    if not ok or not iter then return sessions end
     for file in iter, dirObj do
         if file:sub(-5) == ".json" then
-            local fh = io.open(SESSION_DIR .. "/" .. file)
+            local path = SESSION_DIR .. "/" .. file
+            local fh = io.open(path)
             if fh then
                 local body = fh:read("a")
                 fh:close()
-                local term = body:match('"terminal_id"%s*:%s*"([^"]*)"')
-                if term and term ~= "" then
-                    byTerm[term] = {
+                local tty = body:match('"tty"%s*:%s*"([^"]*)"')
+                local pid = tonumber(body:match('"pid"%s*:%s*(%d+)'))
+                -- Claude exits without SessionEnd often enough that a dead pid,
+                -- not a missing file, is what marks a session gone.
+                if not pid or not registry.shellAlive(pid) then
+                    os.remove(path)
+                elseif tty and tty ~= "" then
+                    table.insert(sessions, {
+                        tty = tty,
+                        sessionId = body:match('"session_id"%s*:%s*"([^"]*)"'),
+                        cwd = body:match('"cwd"%s*:%s*"([^"]*)"'),
                         busy = body:match('"busy"%s*:%s*(%a+)'),
                         started = tonumber(body:match('"started"%s*:%s*(%d+)')),
                         waitingSince = tonumber(body:match('"waiting_since"%s*:%s*(%d+)')),
-                    }
+                    })
                 end
             end
         end
     end
-    return byTerm
+    return sessions
+end
+
+local function claudeByTab()
+    local byTab = {}
+    for _, s in ipairs(M.claudeSessions()) do
+        local id = registry.idForTty(s.tty)
+        if id then byTab[id] = s end
+    end
+    return byTab
 end
 
 local function writeState(tabs, activeId)
     local parts = {}
-    local claude = claudeByTerm()
+    local claude = claudeByTab()
     for id, t in pairs(tabs) do
         local c = claude[id]
         local cjson = "null"
         if c then
             -- busy=nil predates the status hook; report it as unknown, not idle.
             cjson = string.format(
-                '{"busy":%s,"started":%d,"waiting_since":%s}',
+                '{"busy":%s,"started":%d,"waiting_since":%s,"cwd":"%s"}',
                 c.busy or "null", c.started or 0,
-                c.waitingSince and tostring(c.waitingSince) or "null")
+                c.waitingSince and tostring(c.waitingSince) or "null", esc(c.cwd))
         end
+        local tty = registry.ttyForId(id)
         table.insert(parts, string.format(
             '"%s":{"index":%d,"selected":%s,"cwd":"%s","title":"%s",' ..
-            '"born":%d,"last_selected":%d,"selections":%d,"claude":%s}',
+            '"born":%d,"last_selected":%d,"selections":%d,"tty":"%s","claude":%s}',
             esc(id), t.index or 0, tostring(t.selected), esc(t.cwd), esc(t.title),
-            t.born or 0, t.lastSelected or 0, t.selections or 0, cjson))
+            t.born or 0, t.lastSelected or 0, t.selections or 0, esc(tty or ""), cjson))
     end
     local fh = io.open(STATE_FILE, "w")
     if not fh then return end
@@ -156,6 +179,9 @@ local function parse(out)
     for id in pairs(M.tabs) do
         if not seen[id] then M.tabs[id] = nil end
     end
+
+    -- Also reaps state whose shell died: the poll runs regardless of focus.
+    pcall(function() registry.reconcile(M.tabs) end)
 
     -- Backgrounded Ghostty still reports its last tab as selected.
     local app = hs.application.get("Ghostty")
@@ -221,11 +247,18 @@ function M.focusTerminal(id)
     return true
 end
 
+-- tty is the stable identity; its terminal id is resolved per call because a
+-- tab can be closed and the link dropped between poll and click.
+function M.focusTty(tty)
+    local id = registry.idForTty(tty)
+    return id ~= nil and M.focusTerminal(id)
+end
+
 -- Entry point for shells via `hs -c`; clicking the banner jumps to the tab.
-function M.notify(title, message, termId)
-    termId = (termId or ""):match("^%s*(.-)%s*$")
+function M.notify(title, message, tty)
+    tty = (tty or ""):match("^%s*(.-)%s*$")
     local n = hs.notify.new(function(notif)
-        if not (termId ~= "" and M.focusTerminal(termId)) then
+        if not (tty ~= "" and M.focusTty(tty)) then
             M.activateGhostty()
         end
         notif:withdraw()
