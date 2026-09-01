@@ -154,7 +154,12 @@
     },
     "filesystem": {
       "allowWrite": [
+        "~/dev-zone",
+        "~/.cache/buf",
         "~/Library/Caches/go-build",
+        "~/Library/Caches/goimports",
+        "~/Library/Caches/golangci-lint",
+        "~/Library/Caches/gopls",
         "~/go/pkg/mod"
       ],
       "denyWrite": [
