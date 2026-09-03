@@ -127,8 +127,14 @@ brew "nushell"
 
 ## Category: SSH & secrets
 
+# GNU Pretty Good Privacy (PGP) package
+# why: GPG commit signing for one work account (see gitAccounts.signFormat)
+brew "gnupg"
 # OpenBSD freely-licensed SSH connectivity tools
 brew "openssh"
+# Pinentry for GPG on Mac
+# why: gpg-agent needs a GUI prompt where there is no TTY (hooks, make apply)
+brew "pinentry-mac"
 
 ## Category: iOS / Swift
 
