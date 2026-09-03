@@ -50,9 +50,9 @@ twice.
 
 ## Commit Messages
 
-**Subject line only. Never a body.** One line, conventional-commits style
-(`type(scope): summary`), imperative, no trailing period. Whatever the diff
-touched, it goes in that one line or it does not go in.
+**Subject line only. Never a body.** One imperative line, no trailing period,
+plain English: `Bump dependencies`, `Add feature ABC`, `Fix ABC error`.
+Whatever the diff touched, it goes in that one line or it does not go in.
 
 Do NOT write: a blank line followed by anything, bullet lists of changes,
 "why this matters" paragraphs, file-by-file recaps, `Co-Authored-By`,
