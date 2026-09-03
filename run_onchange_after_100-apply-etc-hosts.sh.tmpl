@@ -2,16 +2,19 @@
 # /etc/hosts is outside destDir and root:wheel, so chezmoi cannot manage it
 # directly — `make apply` runs unprivileged.
 #
-# .tmpl because run_onchange_* scripts execute from a tempdir, making sourceDir
-# the only reliable way to find the source file. The hash re-runs this on edit.
-# hosts-hash: {{ include "etc/hosts" | sha256sum }}
+# .tmpl because the source is itself a template: it is rendered inline below
+# (a tempdir cwd makes sourceDir the only reliable path). The hash covers the
+# rendered output, so a change to either the template or its data re-runs this.
+# hosts-hash: {{ includeTemplate "etc/hosts.tmpl" . | sha256sum }}
 
 set -euo pipefail
 
-SRC="{{ .chezmoi.sourceDir }}/etc/hosts"
 DST="/etc/hosts"
-
-[ -f "$SRC" ] || { echo "etc/hosts missing at $SRC; skipping"; exit 0; }
+SRC="$(mktemp -t etc-hosts)"
+trap 'rm -f "$SRC"' EXIT
+cat >"$SRC" <<'HOSTS_EOF'
+{{ includeTemplate "etc/hosts.tmpl" . }}
+HOSTS_EOF
 
 cmp -s "$SRC" "$DST" && exit 0
 

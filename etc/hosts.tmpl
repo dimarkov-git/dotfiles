@@ -7,3 +7,10 @@
 127.0.0.1        localhost
 255.255.255.255  broadcasthost
 ::1              localhost
+{{- range (index . "hostGroups" | default list) }}
+
+# {{ index . "comment" | default .name }}
+{{- range .entries }}
+{{ . }}
+{{- end }}
+{{- end }}
