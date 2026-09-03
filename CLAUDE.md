@@ -150,9 +150,15 @@ set are reported, never overwritten: there `.git/hooks` is dead.
 ## Git identity and signing
 
 Two independent axes, both `includeIf` at the bottom of `dot_gitconfig.tmpl`:
-identity by **path** (`gitdir:` under `gitWorkDir` → `~/.gitconfig-work`) and
-GitLab push options by **remote URL** (`hasconfig:` → `~/.gitconfig-gitlab`).
-Includes must stay below `[user]`; git takes the last value.
+identity by **path** (`gitdir:`) and GitLab push options by **remote URL**
+(`hasconfig:` → `~/.gitconfig-gitlab`). Includes must stay below `[user]`; git
+takes the last value.
+
+Identities are `[[data.gitAccounts]]` entries, one `dot_gitconfig-<name>.tmpl`
+each (bodies differ only in `$want`). **Array order is load-bearing**: a tree
+nested inside an earlier account's `dir` matches both includes and the last
+wins. An entry's `signFormat` picks ssh vs openpgp signing and keeps openpgp
+ones out of `allowed_signers`.
 
 Signing is SSH-format via 1Password's `op-ssh-sign` — no key on disk, so `~/.ssh/`
 is safe to commit. Two traps worth knowing before touching it: `gitSigningKey`

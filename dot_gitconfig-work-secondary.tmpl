@@ -1,7 +1,7 @@
 {{/* Adding an account means copying this file and changing $want; chezmoi
    renders one source to one target.
 */ -}}
-{{- $want := "work" -}}
+{{- $want := "work-secondary" -}}
 {{- range (index . "gitAccounts" | default list) }}
 {{- if eq .name $want -}}
 [user]

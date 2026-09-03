@@ -51,5 +51,13 @@ Host {{ .host }}
 {{- end }}
 {{- end }}
 
+{{- range (index . "gitAccounts" | default list) }}
+{{- if index . "sshPort" }}
+
+Host {{ .host }}
+	Port {{ .sshPort }}
+{{- end }}
+{{- end }}
+
 Host *
 	IdentityAgent "~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"

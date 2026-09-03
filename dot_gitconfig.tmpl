@@ -7,25 +7,22 @@
        gitEmail      = "you@example.com"
        gitSigningKey = "ssh-ed25519 AAAA..."       # optional; public key, see below
        gitlabHost    = "gitlab.example.com"        # optional; enables ssh-rewrite
-       gitWorkDir    = "~/dev-zone/acme/"          # optional; enables the work
-                                                   # identity include, see bottom
+
+   Extra identities are [[data.gitAccounts]] entries, one per repo tree.
 
    When a key is missing, the corresponding section is simply omitted —
    git will prompt for identity on first commit, and the ssh-rewrite block
    stays out of the rendered file.
 
-   The identity above is the DEFAULT one (personal). A second identity for
-   work repos lives in dot_gitconfig-work.tmpl and is pulled in by the
-   [includeIf] block at the very bottom of this file.
+   The identity above is the DEFAULT one (personal); gitAccounts entries
+   override it per tree.
 
-   Commit signing is SSH-based via 1Password's agent, NOT GPG. gitSigningKey
-   holds the *public* half of the same key used for ssh auth (`ssh-ed25519
-   AAAA...`, one line, as shown in 1Password → key → "public key"). The
-   private half never leaves the vault; op-ssh-sign asks the agent to sign.
-   Setting gitSigningKey to a GPG fingerprint will NOT work — see the
-   [gpg] section below for why the two are not interchangeable.
+   gitSigningKey is the *public* half of the ssh auth key (`ssh-ed25519
+   AAAA...`, one line, from 1Password → key → "public key"); the private half
+   never leaves the vault. A GPG fingerprint here is NOT rejected — commits
+   just fail later. Per-tree GPG signing goes through an account's signFormat.
 
-   Verifying them locally is a separate trust list, keyed by email:
+   Verifying is a separate trust list, keyed by email:
    dot_config/git/private_allowed_signers.tmpl.
 */ -}}
 {{- if or (index . "gitName") (index . "gitEmail") (index . "gitSigningKey") -}}
@@ -153,12 +150,14 @@
 	insteadOf = https://{{ .gitlabHost }}/
 {{- end }}
 
-{{- if index . "gitWorkDir" }}
+{{- if index . "gitAccounts" }}
 
-# Work identity for repos under gitWorkDir; everything above is the personal
-# default. Must stay below [user] — git takes the last value for a key.
-[includeIf "gitdir:{{ index . "gitWorkDir" | trimSuffix "/" }}/"]
-	path = ~/.gitconfig-work
+# Array order is load-bearing: a tree nested inside an earlier account's `dir`
+# matches both includes, and git takes the last value.
+{{- range (index . "gitAccounts") }}
+[includeIf "gitdir:{{ .dir | trimSuffix "/" }}/"]
+	path = ~/.gitconfig-{{ .name }}
+{{- end }}
 {{- end }}
 
 {{- if index . "gitlabHost" }}
