@@ -308,6 +308,13 @@ else
     hs.notify.new({ title = "claude-status failed", informativeText = tostring(claudeOrErr) }):send()
 end
 
+local okInput, inputOrErr = pcall(function() return require("input-source").start() end)
+if okInput then
+    inputSource = inputOrErr
+else
+    hs.notify.new({ title = "input-source failed", informativeText = tostring(inputOrErr) }):send()
+end
+
 local okActions, actionsOrErr = pcall(function() return require("actions").bind({ "cmd", "alt" }, "space") end)
 actions = okActions and actionsOrErr or nil
 if not okActions then
@@ -321,6 +328,7 @@ if not okStatus then table.insert(failures, "dotfiles") end
 if not okContainer then table.insert(failures, "container") end
 if not okClaude then table.insert(failures, "claude") end
 if not okTabs then table.insert(failures, "tabs") end
+if not okInput then table.insert(failures, "input") end
 
 if #failures > 0 then
     configAlarm = hs.menubar.new()
