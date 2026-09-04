@@ -1,11 +1,11 @@
--- Layout switching on globe+z (ABC) / globe+x (Russian).
+-- Layout switching on a tapped left shift (ABC) / right shift (Russian).
 --
 -- Two keys rather than one toggle: a toggle desynchronises whenever macOS
 -- changes the layout behind your back (per-app memory, a swallowed press),
 -- and then the key does the opposite of what you wanted.
 --
--- Karabiner rewrites the chords to f18/f19 — hs.hotkey cannot see `fn` as a
--- modifier, so the raw globe chord never reaches here.
+-- Karabiner turns the taps into f18/f19; shift used as a modifier is passed
+-- through untouched, so nothing here sees ordinary capitalisation.
 
 local M = {}
 

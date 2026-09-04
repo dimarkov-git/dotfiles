@@ -18,6 +18,10 @@ defaults write -g ApplePressAndHoldEnabled -bool false
 defaults write -g KeyRepeat -int 2
 defaults write -g InitialKeyRepeat -int 15
 
+# Globe key does nothing on its own; layout switching is on tapped shift.
+# 0 is "Do Nothing" — the input-source default is the key being absent, not 0.
+defaults write com.apple.HIToolbox AppleFnUsageType -int 0
+
 # Substitutions corrupt code pasted through any Cocoa text field.
 defaults write -g NSAutomaticQuoteSubstitutionEnabled -bool false
 defaults write -g NSAutomaticDashSubstitutionEnabled -bool false
