@@ -116,9 +116,11 @@ def _projects-stat [repo: path, want_size: bool] {
     let untracked = ($entries | where { |l| $l starts-with "? " } | length)
     let tracked = ($entries | where { |l| not ($l starts-with "! ") and not ($l starts-with "? ") } | length)
 
+    # Highest tag repo-wide, not `describe`'s nearest HEAD ancestor: a feature
+    # branch would otherwise report the release it forked from.
     let tag = (
-        do { git -C $repo describe --tags --abbrev=0 } | complete
-        | if $in.exit_code == 0 { $in.stdout | str trim } else { "" }
+        do { git -C $repo tag --sort=-v:refname } | complete
+        | if $in.exit_code == 0 { $in.stdout | lines | get -o 0 | default "" | str trim } else { "" }
     )
 
     let stash = (
