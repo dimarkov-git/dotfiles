@@ -7,5 +7,6 @@
 !.claude/CLAUDE.md
 !.claude/settings.json
 !.claude/agents
+!.claude/commands
 !.claude/hooks
 !.claude/skills

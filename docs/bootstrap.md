@@ -370,6 +370,8 @@ workGoTools    = [                                 # optional; extra `go install
   "your.gitlab.example/team/internal-cli",
 ]
 
+autoModeOrg    = "Your Company"                   # optional; org name in Claude Code's autoMode block
+
 sshUser = "your.name"                # optional; default User for sshHosts entries
 
 # optional; work ssh hosts. Unset renders ~/.ssh/config with no host blocks —

@@ -1,8 +1,13 @@
 {
   "env": {
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet"
   },
-  "includeCoAuthoredBy": false,
+  "attribution": {
+    "commit": "",
+    "pr": "",
+    "sessionUrl": false
+  },
   "permissions": {
     "allow": [
       "WebSearch",
@@ -39,7 +44,6 @@
       "Read(~/.cargo/credentials.toml)"
     ],
     "ask": [
-      "Bash(dangerouslyDisableSandbox:true)",
       "Bash(git push:*)",
       "Bash(kubectl apply:*)",
       "Bash(kubectl delete:*)",
@@ -134,13 +138,9 @@
   },
   "enabledPlugins": {
     "context7@claude-plugins-official": true,
-    "pr-review-toolkit@claude-plugins-official": true,
     "claude-md-management@claude-plugins-official": true,
     "plugin-dev@claude-plugins-official": true,
     "security-guidance@claude-plugins-official": true,
-    "code-review@claude-plugins-official": true,
-    "skill-creator@claude-plugins-official": true,
-    "claude-code-setup@claude-plugins-official": true,
     "gopls-lsp@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {},
@@ -204,5 +204,41 @@
   "tui": "fullscreen",
   "autoMemoryEnabled": false,
   "preferredNotifChannel": "notifications_disabled",
-  "skipAutoPermissionPrompt": true
+  "skipAutoPermissionPrompt": true,
+  "autoMode": {
+    "environment": [
+      "### Org-wide",
+{{- if index . "autoModeOrg" }}
+      "**Organization**: {{ index . "autoModeOrg" }}",
+{{- else }}
+      "**Organization**: None configured",
+{{- end }}
+      "**Repository visibility**: assume private unless a remote is a known public host (github.com/gitlab.com public project); internal forges are never queryable for visibility here",
+      "**Internal sharing / snippet hosting**: None configured — public paste/gist services are outside the trust boundary",
+      "**Secrets management**: 1Password (op-ssh-sign signs commits; no private key on disk). Never read or echo a secret to satisfy a task",
+      "**Default / protected branches**: treat `main`, `master`, `develop`, `staging` and `production` as protected whatever the forge reports",
+      "**Network posture**: ordinary developer laptop on an open internet connection; some internal hosts need the VPN up",
+      "**Host containment**: none — commands run against the real machine, its real credentials and its real remotes",
+{{- if index . "gitlabHost" }}
+      "**Trusted internal domains**: {{ index . "gitlabHost" }}{{ if index . "extraGonosumdb" }}, {{ index . "extraGonosumdb" }}{{ end }}{{ if index . "dockerPhpRepo" }}, {{ (splitList "/" (index . "dockerPhpRepo")) | first }}{{ end }}",
+      "**Internal package registry**: {{ index . "gitlabHost" }} (Go modules via GOPRIVATE){{ if index . "dockerPhpRepo" }}; {{ (splitList "/" (index . "dockerPhpRepo")) | first }} (docker images){{ end }}",
+{{- else }}
+      "**Trusted internal domains**: None configured",
+      "**Internal package registry**: None configured",
+{{- end }}
+      "**Sensitive data locations & audiences**: `~/.config/chezmoi/chezmoi.toml` (this machine's private template data — internal hosts, IPs, work identities), `~/.ssh/`, `~/.aws/`, `~/.gnupg/`, `~/.zshrc.secrets`, `~/.claude/settings.local.json`, and any `.env*` in a working repo. Never paste their contents into a commit, an issue, a PR, or an outbound request",
+      "**Sensitive remote targets**: any host, namespace, container or manifest whose name carries `prod`, `production`{{ range index . "sensitiveTargetMarkers" | default list }} or `{{ . }}`{{ end }} as a whole word or name segment",
+      "**Protected IaC scopes**: IAM, RBAC, networking, quota and node-pool resources, and anything tagged prod",
+      "### User-specific",
+      "**Primary use of Claude Code**: software development across several unrelated repos under `~/dev-zone` — a personal dotfiles repo and work services. The working scope is whichever repo is the cwd; other trees under `~/dev-zone` are someone else's context, not fair game",
+      "**Public repo on this machine**: `~/dev-zone/dotfiles` is public. Anything identifying the employer, internal hosts or private IPs belongs in `~/.config/chezmoi/chezmoi.toml`, never in a file committed there",
+      "**Shell**: Nushell is primary; Bash-tool commands run under zsh. BSD coreutils, no GNU twins"
+    ],
+    "soft_deny": [
+      "$defaults",
+      "Writing an internal hostname, private IP, work email or employer name into a file tracked by the public `~/dev-zone/dotfiles` repo — it goes in `~/.config/chezmoi/chezmoi.toml` behind a template guard instead",
+      "`chezmoi apply` run bare, bypassing the drift guard in `make apply`",
+      "Any write against a database, namespace or deployment target whose name carries `prod`{{ range index . "sensitiveTargetMarkers" | default list }} or `{{ . }}`{{ end }}"
+    ]
+  }
 }

@@ -82,12 +82,17 @@ each upgrade adds runtime directories. Its paths resolve against `$HOME`, not
 against `dot_claude/` — write `.claude/agents`, never `agents`.
 
 Adding a config file means adding its `!` line, or chezmoi ignores it. New config
-surfaces Claude Code supports but this machine has yet to use: `commands/`,
-`rules/`, `routines/`, `output-styles/`, `keybindings.json`.
+surfaces Claude Code supports but this machine has yet to use: `rules/`,
+`routines/`, `output-styles/`, `keybindings.json`.
 
-`settings.local.json` holds API keys and stays unmanaged. `autoMode.environment`
-is generated, not hand-written — it is deliberately absent from the tracked
-`settings.json` so Claude Code profiles the real working directory.
+`settings.local.json` holds API keys and stays unmanaged.
+
+`settings.json.tmpl` carries a hand-written `autoMode` block. Left to itself
+Claude Code regenerates that key from whatever repo it last ran in, writing the
+employer's hosts and that project's secret paths into a public repo — so the
+tracked block is machine-wide and pulls every private identifier from
+`gitlabHost`/`extraGonosumdb`/`dockerPhpRepo`. Rewrite it by hand rather than
+re-adding a profiled one; `make drift` catches the overwrite.
 
 ### Session-to-tab pinning
 
@@ -182,6 +187,25 @@ There is **no PHP on this machine** — no `php`, `composer`, `pecl`, or
 `d-php`/`d-make`/`d-composer`/`d-sh`. The container is the version of record.
 Don't re-add a host PHP to `Brewfile.tmpl` or a host branch to
 `docker-php.nu.tmpl`.
+
+## Tools agents reach for that aren't here
+
+Check with `command -v` before assuming; don't `brew install` a missing one to
+finish a task, and don't fall back to hand-rolling what a present tool does.
+
+- **gRPC: `buf curl`, never `grpcurl`** — `grpcurl` and `protoc` are absent and
+  stay absent. `buf` covers calling (`buf curl`), codegen (`buf generate`,
+  driving the `protoc-gen-*` plugins in `Brewfile.tmpl`), `lint`, `format` and
+  `breaking`. A server without reflection needs `--schema <dir-or-image>`.
+- **HTTP: `curl`** — no `httpie`/`xh`/`wget`. Bruno (cask) is the GUI.
+- **No `psql`/`mysql`/`redis-cli`** — `libpq` is keg-only and unlinked (build
+  dependency, not a client). Reach a database through its container or TablePlus.
+- **No GNU coreutils** — `sed`, `date` and `awk` are BSD, with no `g`-prefixed
+  twins. BSD `sed -i` requires an argument: `sed -i ''`.
+- **`fd`/`rg` over `find`/`grep`**, and no `tree` (`lt` is `eza --tree`).
+- **`docker`, `kubectl` and `docker-compose` come from OrbStack**, not Docker
+  Desktop or the `kubernetes-cli` formula — a PATH ordering change silently
+  swaps which binary wins.
 
 ## Out of chezmoi's reach
 
