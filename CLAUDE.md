@@ -110,11 +110,29 @@ unresolved tty costs a jump (the banner raises Ghostty), never a merged session;
 `t-tabs` returns raw data when piped and a formatted table on a terminal, so
 `where age > 1hr` works on durations rather than display strings.
 
+## `dot_codex` (Codex config)
+
+Codex shares Claude Code's rules and skills by symlink, not by copy:
+`~/.codex/AGENTS.md` → `~/.claude/CLAUDE.md`, and one link per shared skill
+under `~/.codex/skills/` (codex's own `.system` skills live beside them and stay
+unmanaged). Per-skill rather than linking the whole directory — `~/.claude/skills`
+also holds cloud-`synced/`, which codex must not load. A new shared skill needs
+its own `symlink_<name>.tmpl` plus a `!` line in `dot_codex/.chezmoiignore`.
+
+`config.toml` is `private_` because codex writes it 0600. Codex also rewrites it
+when you answer a trust prompt, so a new `[projects.*]` block or its
+`[tui.*]` runtime state shows up as drift — re-add only what belongs in the repo.
+Codex matches trust by exact path — a parent entry does not cover nested repos
+(openai/codex#19426) — so the template globs `~/dev-zone` three levels deep and
+merges the hits with `gitAccounts[].dir`. A repo cloned since the last apply
+prompts until `make apply` re-renders.
+
 ## Mode-matching (`private_` prefix)
 
-`private_` normally means "secret", but three places use it purely to match a
-mode the app itself writes: `dot_config/zed/private_settings.json` (Zed rewrites
-0600), `dot_config/private_karabiner/` and `private_dot_ssh/` (0700 dirs). A
+`private_` normally means "secret", but four places use it purely to match a
+mode the app itself writes: `dot_config/zed/private_settings.json` and
+`dot_codex/private_config.toml.tmpl` (both rewritten 0600),
+`dot_config/private_karabiner/` and `private_dot_ssh/` (0700 dirs). A
 mismatch makes chezmoi stop and ask, which under `make apply` has no TTY and
 aborts with `could not open a new TTY`. Don't "normalise" these to 0644.
 

@@ -1,0 +1,10 @@
+# Paths are relative to $HOME, not to this directory.
+#
+# Whitelist, not blocklist: codex writes sessions, caches, sqlite state and its
+# own .system skills into ~/.codex, and adds more each release.
+.codex/*
+!.codex/AGENTS.md
+!.codex/config.toml
+!.codex/rules
+.codex/skills/*
+!.codex/skills/epistemic-verification

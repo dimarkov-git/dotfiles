@@ -356,11 +356,18 @@ gitName        = "Your Name"
 gitEmail       = "you@example.com"
 gitSigningKey  = "ssh-ed25519 AAAA..."           # optional; SSH public key, not GPG
 
-# optional; second identity, activated for repos under gitWorkDir
-gitWorkDir        = "~/dev-zone/work"
-gitWorkName       = "Your Name"
-gitWorkEmail      = "you@company.com"
-gitWorkSigningKey = "ssh-ed25519 AAAA..."        # a different key than the personal one
+# optional; per-path identities. One dot_gitconfig-<name>.tmpl per entry, and
+# codex trusts each dir. Order matters: a tree nested inside an earlier entry's
+# dir matches both includes and the last one wins, so list parents first.
+[[data.gitAccounts]]
+name       = "work"
+dir        = "~/dev-zone/work/"
+email      = "you@company.com"
+userName   = "your.name"                         # optional; falls back to gitName
+signingKey = "ssh-ed25519 AAAA..."               # optional
+signFormat = "ssh"                               # optional; "ssh" or "openpgp"
+host       = "gitlab.your-company.com"           # optional; per-account forge
+sshPort    = 3222                                # optional; only read with host
 
 gitlabHost     = "gitlab.your-company.com"        # optional; enables ssh-rewrite, GOPRIVATE
 gitlabSshPort  = 32322                            # optional; only read when gitlabHost is set
@@ -371,6 +378,7 @@ workGoTools    = [                                 # optional; extra `go install
 ]
 
 autoModeOrg    = "Your Company"                   # optional; org name in Claude Code's autoMode block
+kindCluster    = "kind-yourteam"                  # optional; kubectl context allowlisted in codex rules
 
 sshUser = "your.name"                # optional; default User for sshHosts entries
 

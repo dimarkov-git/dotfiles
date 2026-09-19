@@ -1,0 +1,10 @@
+prefix_rule(pattern=["go", "build"], decision="allow")
+prefix_rule(pattern=["go", "get"], decision="allow")
+prefix_rule(pattern=["go", "mod"], decision="allow")
+prefix_rule(pattern=["go", "test"], decision="allow")
+prefix_rule(pattern=["golangci-lint", "run"], decision="allow")
+prefix_rule(pattern=["docker", "run"], decision="allow")
+prefix_rule(pattern=["make", "docker-it"], decision="allow")
+{{- if index . "kindCluster" }}
+prefix_rule(pattern=["kubectl", "--context", "{{ .kindCluster }}", "get"], decision="allow")
+{{- end }}

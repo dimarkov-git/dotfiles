@@ -1,0 +1,21 @@
+model = "gpt-5.6-sol"
+model_reasoning_effort = "medium"
+
+{{- /* Codex matches trust by exact path — a parent entry does not cover nested
+       repos (openai/codex#19426) — so every repo under ~/dev-zone is listed. */}}
+{{- $dirs := list }}
+{{- range $acct := (index . "gitAccounts" | default list) }}
+{{- if $acct.dir }}
+{{- $dirs = append $dirs ($acct.dir | replace "~" $.chezmoi.homeDir | trimSuffix "/") }}
+{{- end }}
+{{- end }}
+{{- range $depth := list "*" "*/*" "*/*/*" }}
+{{- range glob (printf "%s/dev-zone/%s/.git" $.chezmoi.homeDir $depth) }}
+{{- $dirs = append $dirs (. | trimSuffix "/.git") }}
+{{- end }}
+{{- end }}
+{{- range $dirs | uniq | sortAlpha }}
+
+[projects."{{ . }}"]
+trust_level = "trusted"
+{{- end }}
