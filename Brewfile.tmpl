@@ -1,8 +1,7 @@
 ## Category: Taps
 
 tap "derailed/k9s"
-tap "facebook/fb"
-tap "getsentry/xcodebuildmcp"
+tap "periphery-pro/tap"
 tap "txn2/tap"
 
 ## Category: Core CLI utilities
@@ -139,7 +138,7 @@ brew "pinentry-mac"
 ## Category: iOS / Swift
 
 # Identify unused code in Swift projects
-brew "periphery"
+brew "periphery-pro/tap/periphery-cli"
 
 ## Category: Build dependencies
 
@@ -197,6 +196,12 @@ brew "tealdeer"
 # User interface to the TELNET protocol
 brew "telnet"
 
+## Category: iOS / Swift
+
+# Build server protocol implementation for integrating Xcode with sourcekit-lsp
+# why: sourcekit-lsp resolves nothing in a .xcodeproj without buildServer.json
+brew "xcode-build-server"
+
 ## Category: Shell, navigation & history
 
 # Blazing fast terminal file manager written in Rust, based on async I/O
@@ -222,13 +227,6 @@ brew "zsh"
 
 # Kubernetes CLI To Manage Your Clusters In Style!
 brew "derailed/k9s/k9s"
-
-## Category: iOS / Swift
-
-# A Powerful Command Line for automating iOS Simulators
-brew "facebook/fb/idb-companion"
-# Model Context Protocol server for Xcode project workflows
-brew "getsentry/xcodebuildmcp/xcodebuildmcp"
 
 ## Category: Kubernetes
 
