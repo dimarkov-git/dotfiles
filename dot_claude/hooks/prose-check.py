@@ -9,9 +9,11 @@ import sys
 DASH_COMMENT_EXT = {".sql", ".lua", ".hs", ".lhs", ".adb", ".ads", ".elm", ".pls", ".pks"}
 STAR_COMMENT_EXT = {".c", ".h", ".cc", ".cpp", ".hpp", ".java", ".cs", ".js", ".jsx",
                     ".ts", ".tsx", ".go", ".rs", ".php", ".swift", ".kt", ".scala", ".css"}
+HASH_COMMENT_EXT = {".php"}
 
 COMMENT_ALL = re.compile(r"^\s*(#|//|--|;|\*(?!/))\s*(.*)$")
 COMMENT_NO_DASH = re.compile(r"^\s*(#|//|;|\*(?!/))\s*(.*)$")
+COMMENT_NO_DASH_NO_HASH = re.compile(r"^\s*(//|;|\*(?!/))\s*(.*)$")
 COMMENT_NO_DASH_NO_STAR = re.compile(r"^\s*(#|//|;)\s*(.*)$")
 BANNER = re.compile(r"^\s*(#|//|--|;)\s*[-=*#_~+]{4,}")
 HASH_BANNER = re.compile(r"^\s*#{5,}")
@@ -42,7 +44,8 @@ UNSOLICITED_DOCS = re.compile(
 
 
 def comment_re(path):
-    """`--` is a comment only in SQL-likes; elsewhere it starts a long flag (nushell, argparse)."""
+    """`--` is a comment only in SQL-likes; elsewhere it starts a long flag (nushell, argparse).
+    `#` likewise: a C preprocessor line or a Swift macro (`#expect`), not a comment."""
     root, ext = os.path.splitext(path or "")
     ext = ext.lower()
     if ext in TEMPLATE_EXT:
@@ -50,7 +53,7 @@ def comment_re(path):
     if ext in DASH_COMMENT_EXT:
         return COMMENT_ALL
     if ext in STAR_COMMENT_EXT:
-        return COMMENT_NO_DASH
+        return COMMENT_NO_DASH if ext in HASH_COMMENT_EXT else COMMENT_NO_DASH_NO_HASH
     return COMMENT_NO_DASH_NO_STAR
 
 
