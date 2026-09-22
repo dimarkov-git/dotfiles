@@ -199,13 +199,34 @@
       "glab issue view*"
     ]
   },
+  "feedbackDrafts": "off",
   "alwaysThinkingEnabled": false,
   "effortLevel": "high",
+  "modelSettings": {
+    "claude-opus-5-5": {
+      "effortLevel": "medium"
+    },
+    "claude-fable-5-1": {
+      "effortLevel": "high"
+    },
+    "claude-sonnet-5": {
+      "effortLevel": "medium"
+    },
+    "claude-haiku-4-5": {
+      "effortLevel": "medium"
+    }
+  },
   "tui": "fullscreen",
   "autoMemoryEnabled": false,
   "preferredNotifChannel": "notifications_disabled",
   "skipAutoPermissionPrompt": true,
   "autoMode": {
+    "soft_deny": [
+      "$defaults",
+      "Writing an internal hostname, private IP, work email or employer name into a file tracked by the public `~/dev-zone/dotfiles` repo — it goes in `~/.config/chezmoi/chezmoi.toml` behind a template guard instead",
+      "`chezmoi apply` run bare, bypassing the drift guard in `make apply`",
+      "Any write against a database, namespace or deployment target whose name carries `prod`{{ range index . "sensitiveTargetMarkers" | default list }} or `{{ . }}`{{ end }}"
+    ],
     "environment": [
       "### Org-wide",
 {{- if index . "autoModeOrg" }}
@@ -233,12 +254,6 @@
       "**Primary use of Claude Code**: software development across several unrelated repos under `~/dev-zone` — a personal dotfiles repo and work services. The working scope is whichever repo is the cwd; other trees under `~/dev-zone` are someone else's context, not fair game",
       "**Public repo on this machine**: `~/dev-zone/dotfiles` is public. Anything identifying the employer, internal hosts or private IPs belongs in `~/.config/chezmoi/chezmoi.toml`, never in a file committed there",
       "**Shell**: Nushell is primary; Bash-tool commands run under zsh. BSD coreutils, no GNU twins"
-    ],
-    "soft_deny": [
-      "$defaults",
-      "Writing an internal hostname, private IP, work email or employer name into a file tracked by the public `~/dev-zone/dotfiles` repo — it goes in `~/.config/chezmoi/chezmoi.toml` behind a template guard instead",
-      "`chezmoi apply` run bare, bypassing the drift guard in `make apply`",
-      "Any write against a database, namespace or deployment target whose name carries `prod`{{ range index . "sensitiveTargetMarkers" | default list }} or `{{ . }}`{{ end }}"
     ]
   }
 }

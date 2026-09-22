@@ -378,6 +378,7 @@ workGoTools    = [                                 # optional; extra `go install
 ]
 
 autoModeOrg    = "Your Company"                   # optional; org name in Claude Code's autoMode block
+sensitiveTargetMarkers = ["restricted"]           # optional; extra name segments autoMode treats like `prod`
 kindCluster    = "kind-yourteam"                  # optional; kubectl context allowlisted in codex rules
 
 sshUser = "your.name"                # optional; default User for sshHosts entries
