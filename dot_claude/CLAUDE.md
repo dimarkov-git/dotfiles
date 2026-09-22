@@ -66,6 +66,18 @@ Never prepend the branch name yourself. A `prepare-commit-msg` hook from
 `~/.git-templates` inserts `[branch] ` on the first line, skipping
 `main master develop staging test` and merge commits.
 
+Never bypass that hook. No `--no-verify`/`-n`, no `-c core.hooksPath=`, no
+`HUSKY=0`-style env overrides, no writing the message through a path that skips
+it. If the hook fails or the prefix comes out wrong, stop and report it instead
+of committing around it — a missing `[branch] ` is the bug to fix, not to route
+past. A hook only misbehaving under the sandbox is still not a reason to
+bypass: re-run the commit with the sandbox disabled.
+
+The hook firing on a branch is not a problem to solve. Whether a given branch
+deserves a prefix is the skip-list's call, never a judgement to make per commit
+— a branch outside it gets the prefix. Offering to redo it afterwards does not
+undo the bypass.
+
 ## Epistemic Baseline
 
 Training data is months stale. Treat it as LOWEST priority: project files and user-provided facts are ground truth; web/docs/MCP override training.
