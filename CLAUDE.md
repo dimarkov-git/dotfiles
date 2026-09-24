@@ -99,6 +99,7 @@ re-adding a profiled one; `make drift` catches the overwrite.
 Its socket accepts only processes started inside cmux, so Hammerspoon drives it
 by keystrokes, never the CLI. Its `claude`/`codex` wrappers inject cmux's hooks
 from a PATH shim, which `env.nu.tmpl` must keep ahead of `~/.local/bin`.
+Settings live in `cmux.json`, which cmux mirrors into its plist, not the reverse.
 
 ## `dot_codex` (Codex config)
 
@@ -119,9 +120,10 @@ prompts until `make apply` re-renders.
 
 ## Mode-matching (`private_` prefix)
 
-`private_` normally means "secret", but four places use it purely to match a
-mode the app itself writes: `dot_config/zed/private_settings.json` and
-`dot_codex/private_config.toml.tmpl` (both rewritten 0600),
+`private_` normally means "secret", but five places use it purely to match a
+mode the app itself writes: `dot_config/zed/private_settings.json`,
+`dot_config/cmux/private_cmux.json` and `dot_codex/private_config.toml.tmpl`
+(all rewritten 0600),
 `dot_config/private_karabiner/` and `private_dot_ssh/` (0700 dirs). A
 mismatch makes chezmoi stop and ask, which under `make apply` has no TTY and
 aborts with `could not open a new TTY`. Don't "normalise" these to 0644.
