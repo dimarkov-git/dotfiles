@@ -15,6 +15,19 @@ def _projects-find [root: path, depth: int] {
     | sort
 }
 
+# Linked worktrees can live anywhere, so ask git instead of widening the walk.
+# The first entry is the main checkout itself.
+def _projects-worktrees [repo: path] {
+    let r = (do { git -C $repo worktree list --porcelain } | complete)
+    if $r.exit_code != 0 { return [] }
+    $r.stdout
+    | lines
+    | where { |l| $l starts-with "worktree " }
+    | skip 1
+    | each { |l| $l | str substring 9.. }
+    | where { |p| $p | path exists }
+}
+
 # Segment-wise, so "a-b/x" sorts as a sibling of "a" rather than inside it.
 def _projects-before [a: string, b: string] {
     let x = ($a | split row "/")
@@ -34,20 +47,29 @@ def _projects-before [a: string, b: string] {
 # Branch hygiene: merged-but-undeleted, and branches whose remote is gone.
 def _projects-branches [repo: path, head: string, upstream: string] {
     let all = (
-        do { git -C $repo branch --format="%(refname:short)|%(upstream:track)" } | complete
+        do { git -C $repo branch --format="%(refname:short)|%(upstream:track)|%(worktreepath)" } | complete
         | if $in.exit_code == 0 { $in.stdout | lines } else { [] }
-        | each { |l| let p = ($l | split row "|"); { name: ($p | get -o 0 | default ""), track: ($p | get -o 1 | default "") } }
+        | each { |l|
+            let p = ($l | split row "|")
+            { name: ($p | get -o 0 | default ""), track: ($p | get -o 1 | default ""), wt: ($p | get -o 2 | default "") }
+        }
     )
 
     # "gone" = upstream was deleted on the remote; the local branch is a leftover.
     let gone = ($all | where { |b| $b.track =~ "gone" } | get name)
 
-    # Merged is only meaningful against a real upstream, and never includes HEAD
-    # itself (always merged into its own tip).
+    # Merged is only meaningful against a real upstream, and never includes a
+    # checked-out branch: a fresh worktree off main is merged but in use.
+    let busy = ($all | where wt != "" | get name)
+    # The trunk is merged into every feature branch, not a leftover.
+    let origin_head = (do { git -C $repo symbolic-ref --short refs/remotes/origin/HEAD } | complete)
+    let trunk = (if $origin_head.exit_code == 0 {
+        [($origin_head.stdout | str trim | str replace "origin/" "")]
+    } else { [main master] })
     let merged = (if ($upstream | is-empty) { [] } else {
         do { git -C $repo branch --format="%(refname:short)" --merged $upstream } | complete
         | if $in.exit_code == 0 { $in.stdout | lines } else { [] }
-        | where { |b| $b != $head and $b not-in $gone }
+        | where { |b| $b != $head and $b not-in $gone and $b not-in $busy and $b not-in $trunk }
     })
 
     { merged: $merged, gone: $gone }
@@ -75,7 +97,7 @@ def _projects-size [repo: path, ignored: list<string>] {
 
 # porcelain=v2 carries branch, upstream and ahead/behind in one call; plain
 # --porcelain has no branch.ab line.
-def _projects-stat [repo: path, want_size: bool] {
+def _projects-stat [repo: path, worktree: bool, want_size: bool] {
     let status = (do { git -C $repo status --porcelain=v2 --branch --ignored=matching } | complete)
     if $status.exit_code != 0 { return null }
 
@@ -123,12 +145,15 @@ def _projects-stat [repo: path, want_size: bool] {
         | if $in.exit_code == 0 { $in.stdout | lines | get -o 0 | default "" | str trim } else { "" }
     )
 
-    let stash = (
+    # Stash and branches are shared with the main checkout; count them there only.
+    let stash = (if $worktree { 0 } else {
         do { git -C $repo stash list } | complete
         | if $in.exit_code == 0 { $in.stdout | lines | length } else { 0 }
-    )
+    })
 
-    let branches = (_projects-branches $repo $head $upstream)
+    let branches = (if $worktree { { merged: [], gone: [] } } else {
+        _projects-branches $repo $head $upstream
+    })
 
     let last = (
         do { git -C $repo log -1 --format=%cr } | complete
@@ -143,6 +168,7 @@ def _projects-stat [repo: path, want_size: bool] {
 
     {
         repo: $repo
+        worktree: $worktree
         branch: $branch
         tag: $tag
         dirty: $tracked
@@ -298,7 +324,11 @@ def projects [
         $repos | par-each { |r| do { git -C $r fetch --quiet --prune } | complete } | ignore
     }
 
-    let rows = ($repos | par-each { |r| _projects-stat $r $size } | compact)
+    let trees = ($repos | par-each { |r|
+        [{ path: $r, worktree: false }] ++ (_projects-worktrees $r | each { |w| { path: $w, worktree: true } })
+    } | flatten)
+
+    let rows = ($trees | par-each { |t| _projects-stat $t.path $t.worktree $size } | compact)
 
 
     # Strip the shared prefix, then sort on the paths as displayed.
@@ -317,7 +347,7 @@ def projects [
     # fields they summarise, since a "↑2" string cannot be filtered on.
     if (is-redirected) or not (is-terminal --stdout) {
         let cols = ([
-            [repo branch tag dirty sync ahead behind upstream_gone clean]
+            [repo worktree branch tag dirty sync ahead behind upstream_gone clean]
             (if $full { [untracked merged merged_names gone gone_names stash last] } else { [] })
             (if $size { [size git_size junk_size] } else { [] })
         ] | flatten)
