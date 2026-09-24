@@ -21,7 +21,8 @@
   "project_panel": { "dock": "left" },
   "outline_panel": { "dock": "left" },
   "collaboration_panel": { "dock": "left" },
-  "git_panel": { "dock": "left", "tree_view": true },
+  "git_panel": { "group_by": "status",
+                 "dock": "left", "tree_view": true },
   "agent": { "dock": "right" },
   // Button hidden — Ghostty is the terminal of record; the panel is still
   // reachable from the command palette.
