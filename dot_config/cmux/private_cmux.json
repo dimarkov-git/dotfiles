@@ -9,7 +9,7 @@
     "showInMenuBar": true
   },
   "sidebar": {
-    "hideAllDetails": true
+    "hideAllDetails": false
   },
   "sidebarAppearance": {
     "matchTerminalBackground": true,
