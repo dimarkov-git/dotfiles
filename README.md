@@ -2,7 +2,7 @@
 
 Managed by [chezmoi](https://chezmoi.io). Source dir: `~/dev-zone/dotfiles`.
 
-Shell is Nushell, prompt is starship, terminal is Ghostty.
+Shell is Nushell, prompt is starship, terminal is cmux.
 
 ## Setup
 

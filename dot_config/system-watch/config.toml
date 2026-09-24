@@ -147,7 +147,7 @@ paths = [
   { path = "~/Library/Preferences/com.apple.finder.plist", recursive = false },
   { path = "~/Library/Preferences/com.apple.systempreferences.plist", recursive = false },
   { path = "~/Library/Preferences/com.apple.symbolichotkeys.plist", recursive = false },
-  { path = "~/Library/Preferences/com.mitchellh.ghostty.plist", recursive = false },
+  { path = "~/Library/Preferences/com.cmuxterm.app.plist", recursive = false },
   { path = "~/Library/Preferences/dev.zed.Zed.plist", recursive = false },
 
   # AI tooling writes here outside chezmoi.
@@ -173,7 +173,7 @@ login_items       = "osascript -e 'tell application \"System Events\" to get the
 # the diff churns on every window move. Read specific keys instead.
 defaults_dock     = "defaults read com.apple.dock"
 defaults_global   = "defaults read NSGlobalDomain"
-defaults_ghostty  = "defaults read com.mitchellh.ghostty 2>/dev/null || true"
+defaults_cmux     = "defaults read com.cmuxterm.app 2>/dev/null || true"
 defaults_zed      = "defaults read dev.zed.Zed 2>/dev/null || true"
 defaults_domains  = "defaults domains | tr ',' '\\n' | sort"
 finder_settings   = "for k in ShowPathbar AppleShowAllFiles _FXSortFoldersFirst FXPreferredViewStyle ShowStatusBar; do echo \"$k = $(defaults read com.apple.finder $k 2>/dev/null || echo unset)\"; done"

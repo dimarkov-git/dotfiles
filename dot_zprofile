@@ -14,7 +14,7 @@
 #
 # Hence the account's login shell is /bin/zsh and this file mirrors the PATH
 # from dot_config/nushell/env.nu.tmpl. Interactive work still happens in nu —
-# Ghostty launches it via `command =` in dot_config/ghostty/config, which
+# cmux launches it via `command =` in dot_config/ghostty/config, which
 # bypasses the login shell entirely.
 #
 # Keep the entries below in sync with env.nu.tmpl's `path add` block.

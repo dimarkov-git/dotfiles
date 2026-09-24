@@ -111,16 +111,14 @@ source ~/.config/nushell/autoload/aliases.nu
 source ~/.config/nushell/autoload/yazi.nu
 source ~/.config/nushell/autoload/docker-php.nu
 source ~/.config/nushell/autoload/ghostty-title.nu
-# Before slow-command and tabs: both read the GHOSTTY_TTY it publishes.
-use ~/.config/nushell/autoload/tab-identity.nu *
 source ~/.config/nushell/autoload/slow-command.nu
-use ~/.config/nushell/autoload/tabs.nu *
 source ~/.config/nushell/autoload/k-cache.nu
 source ~/.config/nushell/autoload/k-ctx.nu
 source ~/.config/nushell/autoload/k-pg.nu
 source ~/.config/nushell/autoload/k-kind.nu
 source ~/.config/nushell/autoload/direnv.nu
 source ~/.config/nushell/autoload/dot-ask.nu
+source ~/.config/nushell/autoload/agent-cua.nu
 source ~/.config/nushell/autoload/dot-check.nu
 source ~/.config/nushell/autoload/system-watch.nu
 source ~/.config/nushell/autoload/projects.nu

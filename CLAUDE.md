@@ -2,7 +2,7 @@
 
 Personal macOS dotfiles managed by **chezmoi**. Source dir `~/dev-zone/dotfiles`
 (set in `~/.config/chezmoi/chezmoi.toml`); `dot_` prefixes map to `~/.`. Shell is
-**Nushell**, prompt starship, terminal Ghostty. Packages pinned in `Brewfile`.
+**Nushell**, prompt starship, terminal cmux (libghostty; reads `dot_config/ghostty/config`). Packages pinned in `Brewfile`.
 
 The files here are heavily commented — read the one you're changing rather than
 looking for a description of it in this file.
@@ -94,21 +94,11 @@ tracked block is machine-wide and pulls every private identifier from
 `gitlabHost`/`extraGonosumdb`/`dockerPhpRepo`. Rewrite it by hand rather than
 re-adding a profiled one; `make drift` catches the overwrite.
 
-### Session-to-tab pinning
+## cmux
 
-tty is the primary key across the shell (`tab-identity.nu`), the hooks
-(`dot_claude/hooks/`), and Hammerspoon (`tab-registry.lua`) — unique per tab and
-inherited, so resume and splits cannot collide the way a terminal id did.
-
-Ghostty exposes neither pid nor tty, so `focus` only takes a terminal id, which
-`tab-registry.lua` infers from cwd: a tab binds only when its cwd leaves exactly
-one unclaimed id. Two tabs opened in one directory therefore stay unbound until
-one is claimed, after which bindings persist until the shell or tab dies. An
-unresolved tty costs a jump (the banner raises Ghostty), never a merged session;
-`t-tabs | where tty == ""` lists them and the menubar marks them `⚠`.
-
-`t-tabs` returns raw data when piped and a formatted table on a terminal, so
-`where age > 1hr` works on durations rather than display strings.
+Its socket accepts only processes started inside cmux, so Hammerspoon drives it
+by keystrokes, never the CLI. Its `claude`/`codex` wrappers inject cmux's hooks
+from a PATH shim, which `env.nu.tmpl` must keep ahead of `~/.local/bin`.
 
 ## `dot_codex` (Codex config)
 

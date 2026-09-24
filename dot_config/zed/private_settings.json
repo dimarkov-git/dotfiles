@@ -24,7 +24,7 @@
   "git_panel": { "group_by": "status",
                  "dock": "left", "tree_view": true },
   "agent": { "dock": "right" },
-  // Button hidden — Ghostty is the terminal of record; the panel is still
+  // Button hidden — cmux is the terminal of record; the panel is still
   // reachable from the command palette.
   "terminal": {
     "button": false,

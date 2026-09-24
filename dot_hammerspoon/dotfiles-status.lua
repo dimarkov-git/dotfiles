@@ -32,25 +32,24 @@ local function probe(done)
     if task then task:start() end
 end
 
--- New tab, not the quick terminal: that binding is a toggle with no way to
--- query the panel, so a click could dismiss it instead of opening it.
-local function openInGhostty(command)
-    local ghostty = hs.application.get("Ghostty")
-    if not ghostty then
-        hs.application.launchOrFocus("Ghostty")
+-- Keystrokes, not the cmux CLI: its socket refuses processes started outside cmux.
+local function openInTerminal(command)
+    local term = hs.application.get("cmux")
+    if not term then
+        hs.application.launchOrFocus("cmux")
         hs.timer.usleep(800000)
-        ghostty = hs.application.get("Ghostty")
-        if not ghostty then return end
+        term = hs.application.get("cmux")
+        if not term then return end
     end
-    ghostty:activate()
+    term:activate()
     hs.timer.usleep(150000)
 
-    -- cmd+t needs a window to put the tab in; a running Ghostty with none
-    -- (all closed) needs cmd+n instead.
-    hs.eventtap.keyStroke({ "cmd" }, ghostty:focusedWindow() and "t" or "n", 0)
+    -- cmd+n (new workspace) needs a window; with none, cmd+shift+n opens one.
+    local mods = term:focusedWindow() and { "cmd" } or { "cmd", "shift" }
+    hs.eventtap.keyStroke(mods, "n", 0)
     hs.timer.usleep(400000)
 
-    -- `;`, not `&&`: Ghostty runs Nushell, which rejects `&&`.
+    -- `;`, not `&&`: the shell is Nushell, which rejects `&&`.
     hs.eventtap.keyStrokes(string.format("cd %s; %s", REPO, command))
     hs.eventtap.keyStroke({}, "return", 0)
 end
@@ -114,10 +113,10 @@ function M.buildMenu(st)
         if #rootFiles > 0 then
             item("root-owned files differ from repo", { disabled = true })
             for _, f in ipairs(rootFiles) do
-                item("   " .. f.target, { fn = function() openInGhostty("dot-diff root") end })
+                item("   " .. f.target, { fn = function() openInTerminal("dot-diff root") end })
             end
             -- `make apply` only rewrites these when the repo copy itself changed.
-            item("Overwrite with sudo (make restore)", { fn = function() openInGhostty("make restore") end })
+            item("Overwrite with sudo (make restore)", { fn = function() openInTerminal("make restore") end })
             item("-")
         end
 
@@ -132,13 +131,13 @@ function M.buildMenu(st)
         end
 
         if #drift > 0 then
-            item("Run make re-add", { fn = function() openInGhostty("make re-add") end })
+            item("Run make re-add", { fn = function() openInTerminal("make re-add") end })
         end
         if #pending > 0 then
-            item("Run make apply", { fn = function() openInGhostty("make apply") end })
+            item("Run make apply", { fn = function() openInTerminal("make apply") end })
         end
         if #drift > 0 or #pending > 0 or #rootFiles > 0 then
-            item("Show diff", { fn = function() openInGhostty("dot-diff") end })
+            item("Show diff", { fn = function() openInTerminal("dot-diff") end })
         end
     end
 

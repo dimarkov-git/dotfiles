@@ -59,7 +59,7 @@ backup to fall back on.
 
 # Phase 1 — prerequisites (by hand, before cloning)
 
-Stock **Terminal.app** with bash/zsh. Nushell and Ghostty do not exist yet.
+Stock **Terminal.app** with bash/zsh. Nushell and cmux do not exist yet.
 
 ## 1. FileVault
 
@@ -198,7 +198,7 @@ The first `apply`:
   into `~/.config/k9s/skins/` (see `K9S_CONFIG_DIR` in `env.nu`).
 - `run_once_after_060-install-claude-code.sh` → no-op if step 4 ran it.
 - `run_onchange_after_090-apply-defaults.sh` → `defaults write` for Dock,
-  Finder, Ghostty, Zed.
+  Finder, Zed.
 - `run_onchange_after_100-apply-etc-hosts.sh.tmpl` → **prompts for your sudo
   password**; `/etc/hosts` is root-owned and outside destDir. Declining leaves
   it unchanged and the apply still succeeds.
@@ -217,9 +217,9 @@ scripts — `run_once_*` state is recorded per script.
 
 # Phase 3 — post-apply setup
 
-## 7. Set Ghostty as the default terminal
+## 7. Set cmux as the default terminal
 
-Open Ghostty once from Spotlight so it registers with macOS.
+Open cmux once from Spotlight so it registers with macOS.
 
 Hammerspoon binds **option+space** to show/hide it (see
 `dot_hammerspoon/init.lua`), which needs Accessibility granted once:
@@ -229,10 +229,6 @@ Hammerspoon binds **option+space** to show/hide it (see
 Grant it *before* testing the hotkey — Hammerspoon caches the permission at
 startup, so quit and reopen it if it was already running.
 
-Ghostty's own drop-down terminal on `ctrl+\`` works without Accessibility
-and coexists: it opens a separate scratch surface, option+space raises the
-main window with your tabs.
-
 ## 8. Switch the login shell to Nushell
 
 ```sh
@@ -240,8 +236,8 @@ echo "/opt/homebrew/bin/nu" | sudo tee -a /etc/shells
 chsh -s /opt/homebrew/bin/nu
 ```
 
-Ghostty pins `command = /opt/homebrew/bin/nu`, so this is only needed for
-other terminals.
+`dot_config/ghostty/config` pins `command = /opt/homebrew/bin/nu` for cmux, so
+this is only needed for other terminals.
 
 ## 9. Rust toolchain
 
@@ -286,10 +282,6 @@ with `cargo install nu_plugin_<name>`, `nu -c 'plugin add
 - **1Password CLI**: `op signin` — authorises `op` for `op://` references in chezmoi templates.
 - **direnv**: nothing; `direnv allow` once per project with an `.envrc`.
 - **SSH**: nothing — keys stay in the vault, `~/.ssh/config` was deployed in step 6.
-- **Claude Code menubar indicator**: `dot_hammerspoon/claude-status.lua` renders
-  session state from `~/.local/state/claude-sessions/` and is poked by
-  `dot_claude/hooks/claude-notify.sh` via `hs -c`. Both are chezmoi-managed; the
-  state directory is created by the hooks on first session.
 
 **Commit signing** is configured by `.gitconfig` (SSH signing via
 `op-ssh-sign`, same key as auth), but the forge needs the key registered a
@@ -320,7 +312,7 @@ sudo fdesetup status       # "FileVault is On."
 ssh-add -l                 # vault key, in a shell with no SSH_AUTH_SOCK export
 ```
 
-Run `ssh-add -l` in a **new Ghostty tab**, not the Terminal.app window you
+Run `ssh-add -l` in a **new cmux tab**, not the Terminal.app window you
 bootstrapped in — that proves `~/.ssh/config` is doing the work rather than
 the step 5 export, which dies with that window.
 

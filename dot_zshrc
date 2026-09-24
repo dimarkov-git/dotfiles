@@ -2,7 +2,7 @@
 #
 # zsh is the *login* shell here purely so GUI apps can resolve PATH (see the
 # header in ~/.zprofile). Day-to-day interactive work happens in Nushell,
-# launched by Ghostty via `command =` in dot_config/ghostty/config.
+# launched by cmux via `command =` in dot_config/ghostty/config.
 #
 # So this file is only reached when a zsh prompt is opened by hand — a
 # fallback when nu's config is broken. Prompt, aliases and completion live in

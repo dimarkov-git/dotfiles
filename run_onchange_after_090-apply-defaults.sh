@@ -11,7 +11,7 @@ set -euo pipefail
 
 # ─── Keyboard ───────────────────────────────────────────────────────────────
 
-# Press-and-hold shows an accent menu, eating held j/k in Zed and Ghostty.
+# Press-and-hold shows an accent menu, eating held j/k in Zed and cmux.
 defaults write -g ApplePressAndHoldEnabled -bool false
 
 # Below the GUI slider's floor, which stops at 2 / 15.
@@ -57,14 +57,6 @@ defaults write com.apple.finder FXPreferredGroupBy -string Name
 defaults write com.apple.finder FXPreferredViewStyle -string Nlsv
 
 killall Finder 2>/dev/null || true
-
-# ─── Ghostty ────────────────────────────────────────────────────────────────
-# NSWindow/Sparkle settings, only readable from the plist. Everything else
-# lives in the chezmoi-managed ~/.config/ghostty/config.
-# false to match `window-save-state = never`: left true, macOS restores the
-# windows Ghostty declined to save.
-defaults write com.mitchellh.ghostty NSQuitAlwaysKeepsWindows -bool false
-defaults write com.mitchellh.ghostty SUEnableAutomaticChecks -bool false
 
 # ─── Zed ────────────────────────────────────────────────────────────────────
 # AppKit-level toggle, not exposed in Zed's settings.json.

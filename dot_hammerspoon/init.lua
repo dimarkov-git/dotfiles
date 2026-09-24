@@ -1,20 +1,13 @@
 -- Hammerspoon config.
 --
--- Scope: a global option+space toggle for Ghostty that behaves like a
--- drop-down terminal — show it on whichever Space is currently active,
--- sized to the top 70% of the screen; press again to hide.
---
--- Note: Ghostty has a built-in quick terminal (`toggle_quick_terminal`,
--- bound to ctrl+` in dot_config/ghostty/config) that covers much of this
--- natively. This drives the MAIN Ghostty window instead, so the same
--- session/tabs are always one keystroke away rather than a separate
--- scratch surface.
+-- option+space: drop-down cmux on the active Space, top 70% of the screen;
+-- press again to hide.
 
 -- Enables the `hs` CLI (installed by the cask as /opt/homebrew/bin/hs), so
 -- config can be poked at from a shell: `hs -c 'hs.reload()'`.
 require("hs.ipc")
 
-local GHOSTTY = "Ghostty"
+local TERMINAL = "cmux"
 
 -- Fraction of the screen height the window occupies when shown, anchored to
 -- the top edge and spanning the full width.
@@ -38,7 +31,7 @@ end
 -- Pull a window onto the Space that's currently active.
 --
 -- Without this, hitting the hotkey on another Space makes macOS *switch* to
--- wherever Ghostty already lives, instead of bringing it here — the opposite
+-- wherever the terminal already lives, instead of bringing it here — the opposite
 -- of drop-down behaviour.
 --
 -- hs.spaces.moveWindowToSpace uses private CoreGraphics APIs, so treat it as
@@ -67,14 +60,14 @@ end
 -- window server hasn't remapped yet — it silently does nothing, which reads
 -- as "the hotkey doesn't open it". Hence unhide first, then position on the
 -- next runloop turn.
-local function showGhostty(app, win)
+local function showTerminal(app, win)
     app:unhide()
     app:activate()
 
     hs.timer.doAfter(0.05, function()
         local w = win
         if not w or not w:isVisible() then
-            local a = hs.application.get(GHOSTTY)
+            local a = hs.application.get(TERMINAL)
             w = a and a:mainWindow()
         end
         if not w then return end
@@ -86,15 +79,15 @@ local function showGhostty(app, win)
     end)
 end
 
-local function toggleGhostty()
-    local app = hs.application.get(GHOSTTY)
+local function toggleTerminal()
+    local app = hs.application.get(TERMINAL)
 
     -- Not running: launch it. The window won't exist yet, so position it
     -- once it appears rather than racing the launch.
     if not app then
-        hs.application.launchOrFocus(GHOSTTY)
+        hs.application.launchOrFocus(TERMINAL)
         hs.timer.doAfter(0.6, function()
-            local a = hs.application.get(GHOSTTY)
+            local a = hs.application.get(TERMINAL)
             local w = a and a:mainWindow()
             if w then
                 positionTop(w)
@@ -111,7 +104,7 @@ local function toggleGhostty()
         app:activate()
         app:selectMenuItem({ "File", "New Window" })
         hs.timer.doAfter(0.4, function()
-            local w = hs.application.get(GHOSTTY)
+            local w = hs.application.get(TERMINAL)
             w = w and w:mainWindow()
             if w then
                 positionTop(w)
@@ -121,8 +114,8 @@ local function toggleGhostty()
         return
     end
 
-    -- Hide only when Ghostty is genuinely in front. Pressing the hotkey from
-    -- another app brings Ghostty forward instead — otherwise one key would
+    -- Hide only when the terminal is genuinely in front. Pressing the hotkey from
+    -- another app brings it forward instead — otherwise one key would
     -- mean two different things depending on invisible state.
     --
     -- `isHidden()` is checked explicitly rather than inferred from
@@ -134,10 +127,10 @@ local function toggleGhostty()
         return
     end
 
-    showGhostty(app, win)
+    showTerminal(app, win)
 end
 
-hs.hotkey.bind({ "alt" }, "space", toggleGhostty)
+hs.hotkey.bind({ "alt" }, "space", toggleTerminal)
 
 -- Global like dotfilesStatus: a local lets GC reap the menubar.
 local okXdebug, xdebugOrErr = pcall(function() return require("xdebug-status") end)
@@ -286,28 +279,6 @@ else
     hs.notify.new({ title = "container-status failed", informativeText = tostring(containerOrErr) }):send()
 end
 
-local okTabs, tabsOrErr = pcall(function() return require("tab-state").start() end)
-if okTabs then
-    tabState = tabsOrErr
-    -- Global entry point for the shell's slow-command hook (`hs -c`).
-    function tabNotify(title, message, tty)
-        tabState.notify(title, message, tty)
-    end
-else
-    hs.notify.new({ title = "tab-state failed", informativeText = tostring(tabsOrErr) }):send()
-end
-
-local okClaude, claudeOrErr = pcall(function() return require("claude-status").start() end)
-if okClaude then
-    claudeStatus = claudeOrErr
-    -- Global entry point for ~/.claude/hooks/claude-notify.sh (`hs -c`).
-    function claudeNotify(title, message, dir, tty, kind, urgent)
-        claudeStatus.notify(title, message, dir, tty, kind, urgent)
-    end
-else
-    hs.notify.new({ title = "claude-status failed", informativeText = tostring(claudeOrErr) }):send()
-end
-
 local okInput, inputOrErr = pcall(function() return require("input-source").start() end)
 if okInput then
     inputSource = inputOrErr
@@ -326,8 +297,6 @@ end
 local failures = {}
 if not okStatus then table.insert(failures, "dotfiles") end
 if not okContainer then table.insert(failures, "container") end
-if not okClaude then table.insert(failures, "claude") end
-if not okTabs then table.insert(failures, "tabs") end
 if not okInput then table.insert(failures, "input") end
 
 if #failures > 0 then

@@ -86,61 +86,6 @@
           }
         ]
       }
-    ],
-    "SessionStart": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/claude-session-register.sh"
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/claude-session-register.sh"
-          }
-        ]
-      }
-    ],
-    "Notification": [
-      {
-        "matcher": "permission_prompt|idle_prompt|elicitation_dialog|agent_needs_input|agent_completed",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/claude-notify.sh"
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/claude-session-status.sh"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/claude-session-status.sh"
-          }
-        ]
-      }
     ]
   },
   "enabledPlugins": {
@@ -261,7 +206,7 @@
       "**Sensitive remote targets**: any host, namespace, container or manifest whose name carries `prod`, `production`{{ range index . "sensitiveTargetMarkers" | default list }} or `{{ . }}`{{ end }} as a whole word or name segment",
       "**Protected IaC scopes**: IAM, RBAC, networking, quota and node-pool resources, and anything tagged prod",
       "### User-specific",
-      "**Primary use of Claude Code**: software development across several unrelated repos under `~/dev-zone` — a personal dotfiles repo and work services. The working scope is whichever repo is the cwd; other trees under `~/dev-zone` are someone else's context, not fair game",
+      "**Primary use of Claude Code**: software development across several unrelated repos under `~/dev-zone` — a personal dotfiles repo and work services. The working scope is whichever repo is the cwd; a project's CLAUDE.md may widen it to directories it names",
       "**Public repo on this machine**: `~/dev-zone/dotfiles` is public. Anything identifying the employer, internal hosts or private IPs belongs in `~/.config/chezmoi/chezmoi.toml`, never in a file committed there",
       "**Shell**: Nushell is primary; Bash-tool commands run under zsh. BSD coreutils, no GNU twins"
     ]
