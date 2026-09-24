@@ -8,6 +8,9 @@
     "enabled": true,
     "showInMenuBar": true
   },
+  "sidebar": {
+    "hideAllDetails": true
+  },
   "sidebarAppearance": {
     "matchTerminalBackground": true,
     "tintOpacity": 0.18
