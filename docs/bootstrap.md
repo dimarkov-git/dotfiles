@@ -383,6 +383,10 @@ kindCluster    = "kind-yourteam"                  # optional; kubectl context al
 
 sshUser = "your.name"                # optional; default User for sshHosts entries
 
+jiraSite    = "your-org.atlassian.net"               # optional; all three render ~/.local/bin/jira
+jiraCloudId = "00000000-0000-0000-0000-000000000000" # from https://<jiraSite>/_edge/tenant_info
+jiraOpItem  = "op://Vault/Jira Token"                # 1Password item: username = email, password = scoped token
+
 # optional; work ssh hosts. Unset renders ~/.ssh/config with no host blocks —
 # `host` is the only required field per entry.
 [[data.sshHosts]]

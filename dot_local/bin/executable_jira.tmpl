@@ -1,0 +1,124 @@
+{{- if index . "jiraCloudId" -}}
+#!/bin/bash
+# Jira Cloud REST client; writes are refused unless the issue is assigned to or reported by the token owner.
+set -euo pipefail
+
+OP_ITEM=${JIRA_OP_ITEM:-"{{ index . "jiraOpItem" }}"}
+# Scoped tokens only work through the api.atlassian.com gateway, not the site URL.
+BASE="https://api.atlassian.com/ex/jira/{{ index . "jiraCloudId" }}/rest/api/3"
+SITE="https://{{ index . "jiraSite" }}"
+
+email=$(op read "$OP_ITEM/username")
+token=$(op read "$OP_ITEM/password")
+AUTH=$(printf '%s:%s' "$email" "$token" | base64 | tr -d '\n')
+unset email token
+
+api() {
+  local method=$1 path=$2
+  shift 2
+  curl -sS --fail-with-body -X "$method" "$BASE$path" \
+    -H "Authorization: Basic $AUTH" -H 'Accept: application/json' -H 'Content-Type: application/json' "$@"
+}
+
+ADF='def adf:
+  if type != "object" then ""
+  elif .type == "text" then .text
+  elif .type == "hardBreak" then "\n"
+  elif .type == "mention" then .attrs.text
+  else (if .type == "listItem" then "- " else "" end)
+    + ((.content // []) | map(adf) | join(""))
+    + (if (.type | IN("paragraph", "heading", "codeBlock", "blockquote")) then "\n" else "" end)
+  end;'
+
+text_to_adf() {
+  jq -Rs '{type: "doc", version: 1, content: (split("\n\n") | map(select(length > 0)) |
+    map({type: "paragraph", content: [{type: "text", text: .}]}))}'
+}
+
+require_mine() {
+  local me owner
+  me=$(api GET /myself | jq -r .accountId)
+  owner=$(api GET "/issue/$1?fields=assignee,reporter" | jq -r '[.fields.assignee.accountId, .fields.reporter.accountId] | join(" ")')
+  if [[ " $owner " != *" $me "* ]]; then
+    echo "refused: $1 is neither assigned to nor reported by you" >&2
+    exit 3
+  fi
+}
+
+usage() {
+  cat >&2 <<'EOF'
+usage: jira <command>
+  me                          current user
+  get KEY                     issue with description, subtasks, links, last comments
+  search JQL [MAX]            summary lines
+  transitions KEY             available transitions
+  comment KEY < text          add a comment (plain text, blank line splits paragraphs)
+  transition KEY NAME         move the issue by transition or target status name
+  edit KEY JSON               PUT fields, e.g. '{"summary":"..."}'
+EOF
+  exit 2
+}
+
+cmd=${1:-}
+[ -n "$cmd" ] || usage
+shift
+
+case "$cmd" in
+  me)
+    api GET /myself | jq -r '"\(.displayName) <\(.emailAddress // "-")> \(.accountId)"'
+    ;;
+  get)
+    key=${1:?KEY}
+    api GET "/issue/$key?fields=summary,status,issuetype,assignee,reporter,priority,parent,subtasks,issuelinks,labels,description,comment" |
+      jq -r --arg site "$SITE" "$ADF"'
+        .fields as $f |
+        "\(.key) [\($f.issuetype.name)] \($f.status.name) — \($f.summary)",
+        "\($site)/browse/\(.key)",
+        "assignee: \($f.assignee.displayName // "-")  reporter: \($f.reporter.displayName // "-")  priority: \($f.priority.name // "-")",
+        (if $f.parent then "parent: \($f.parent.key) [\($f.parent.fields.issuetype.name)] \($f.parent.fields.summary)" else empty end),
+        (if ($f.labels | length) > 0 then "labels: \($f.labels | join(", "))" else empty end),
+        "", "## Description", ($f.description | adf),
+        (if ($f.subtasks | length) > 0 then "## Subtasks", ($f.subtasks[] | "- \(.key) \(.fields.status.name) — \(.fields.summary)") else empty end),
+        (if ($f.issuelinks | length) > 0 then "## Links", ($f.issuelinks[] |
+          if .outwardIssue then "- \(.type.outward) \(.outwardIssue.key) — \(.outwardIssue.fields.summary)"
+          else "- \(.type.inward) \(.inwardIssue.key) — \(.inwardIssue.fields.summary)" end) else empty end),
+        (if $f.comment.total > 0 then "## Comments (last 5 of \($f.comment.total))",
+          ($f.comment.comments[-5:][] | "### \(.author.displayName) \(.created[0:16])", (.body | adf)) else empty end)'
+    ;;
+  search)
+    jql=${1:?JQL}
+    max=${2:-20}
+    jq -n --arg jql "$jql" --argjson max "$max" '{jql: $jql, maxResults: $max, fields: ["summary", "status", "assignee"]}' |
+      api POST /search/jql -d @- |
+      jq -r '.issues[] | "\(.key)\t\(.fields.status.name)\t\(.fields.assignee.displayName // "-")\t\(.fields.summary)"'
+    ;;
+  transitions)
+    api GET "/issue/${1:?KEY}/transitions" | jq -r '.transitions[] | "\(.id)\t\(.name) → \(.to.name)"'
+    ;;
+  comment)
+    key=${1:?KEY}
+    require_mine "$key"
+    text_to_adf | jq '{body: .}' | api POST "/issue/$key/comment" -d @- | jq -r '"commented: \(.id)"'
+    ;;
+  transition)
+    key=${1:?KEY}
+    name=${2:?NAME}
+    require_mine "$key"
+    id=$(api GET "/issue/$key/transitions" |
+      jq -r --arg n "$name" '[.transitions[] | select((.name | ascii_downcase) == ($n | ascii_downcase) or (.to.name | ascii_downcase) == ($n | ascii_downcase))][0].id // empty')
+    [ -n "$id" ] || { echo "no transition '$name' for $key; see: jira transitions $key" >&2; exit 1; }
+    jq -n --arg id "$id" '{transition: {id: $id}}' | api POST "/issue/$key/transitions" -d @-
+    echo "transitioned $key via $id"
+    ;;
+  edit)
+    key=${1:?KEY}
+    fields=${2:?JSON}
+    require_mine "$key"
+    jq -n --argjson f "$fields" '{fields: $f}' | api PUT "/issue/$key" -d @-
+    echo "edited $key"
+    ;;
+  *)
+    usage
+    ;;
+esac
+{{ end -}}

@@ -21,7 +21,11 @@
       "TaskOutput",
       "TaskStop",
       "LSP",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(jira me)",
+      "Bash(jira get *)",
+      "Bash(jira search *)",
+      "Bash(jira transitions *)"
     ],
     "deny": [
       "Bash(rm -rf /)",
@@ -61,7 +65,10 @@
       "Bash(git reset --hard:*)",
       "Bash(git clean:*)",
       "Bash(docker system prune:*)",
-      "Bash(docker volume rm:*)"
+      "Bash(docker volume rm:*)",
+      "Bash(jira comment *)",
+      "Bash(jira transition *)",
+      "Bash(jira edit *)"
     ],
     "defaultMode": "auto"
   },
@@ -195,8 +202,11 @@
       "glab mr diff*",
       "glab mr note list*",
       "glab ci view*",
+      "glab ci status*",
+      "glab ci trace*",
       "glab issue list*",
-      "glab issue view*"
+      "glab issue view*",
+      "jira *"
     ]
   },
   "feedbackDrafts": "off",
